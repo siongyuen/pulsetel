@@ -1,6 +1,14 @@
 import { PulseliveConfig } from '../config';
 import { CheckResult } from '../scanner';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
+
+/**
+ * Safely execute a git command using execFileSync to prevent shell injection.
+ * execFileSync does not spawn a shell — arguments are passed directly to the binary.
+ */
+function git(args: string[]): string {
+  return execFileSync('git', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+}
 
 export class GitCheck {
   private config: PulseliveConfig;
@@ -12,13 +20,13 @@ export class GitCheck {
   async run(): Promise<CheckResult> {
     try {
       // Get current branch
-      const branch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      const branch = git(['rev-parse', '--abbrev-ref', 'HEAD']);
 
       // Get recent commits
-      const recentCommits = execSync('git log --oneline -5', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      const recentCommits = git(['log', '--oneline', '-5']);
 
       // Get uncommitted changes count
-      const uncommitted = execSync('git status --porcelain', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+      const uncommitted = git(['status', '--porcelain']);
       const uncommittedCount = uncommitted.split('\n').filter(line => line.trim() !== '').length;
 
       // Get divergence from default branch (main, master, or trunk)
@@ -27,14 +35,14 @@ export class GitCheck {
         // Resolve the default branch: prefer remote HEAD, fall back to local branches
         let defaultBranch: string | undefined;
         try {
-          const remoteHead = execSync('git rev-parse --abbrev-ref HEAD@{upstream}', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+          const remoteHead = git(['rev-parse', '--abbrev-ref', 'HEAD@{upstream}']);
           // e.g. 'origin/main' → extract 'main'
           defaultBranch = remoteHead.split('/').slice(1).join('/');
         } catch {
           // No upstream — try common defaults in order
           for (const candidate of ['main', 'master', 'trunk', 'develop']) {
             try {
-              execSync(`git rev-parse --verify ${candidate}`, { encoding: 'utf8', stdio: 'pipe' });
+              git(['rev-parse', '--verify', candidate]);
               defaultBranch = candidate;
               break;
             } catch {
@@ -50,7 +58,7 @@ export class GitCheck {
           if (defaultBranch === branch) {
             try {
               // Try to use the upstream tracking branch for comparison
-              const upstream = execSync('git rev-parse --abbrev-ref HEAD@{upstream}', { encoding: 'utf8', stdio: 'pipe' }).trim();
+              const upstream = git(['rev-parse', '--abbrev-ref', 'HEAD@{upstream}']);
               compareRef = upstream; // e.g. 'origin/main'
             } catch {
               // No upstream set — already on default branch with no remote, can't determine divergence
@@ -61,16 +69,14 @@ export class GitCheck {
             compareRef = defaultBranch;
           }
 
-          const compareCommit = execSync(`git rev-parse ${compareRef}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-          const currentCommit = execSync('git rev-parse HEAD', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-          const diff = execSync(`git rev-list --left-right --count ${compareCommit}...${currentCommit}`, {
-            encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe']
-          }).trim();
+          const compareCommit = git(['rev-parse', compareRef]);
+          const currentCommit = git(['rev-parse', 'HEAD']);
+          const diff = git(['rev-list', '--left-right', '--count', `${compareCommit}...${currentCommit}`]);
           const [behind, ahead] = diff.split('\t').map(Number);
           divergence = ahead > 0 ? `ahead by ${ahead}` : behind > 0 ? `behind by ${behind}` : 'up to date';
         }
       } catch (error) {
-        // Couldn't determine divergence
+        // Couldn't determine divergence — already handled above
       }
 
       return {
@@ -104,7 +110,7 @@ export class GitCheck {
       return {
         type: 'git',
         status: 'error',
-        message: `Git check failed: ${errMsg}`
+        message: 'Git check failed'
       };
     }
   }

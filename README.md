@@ -1,16 +1,17 @@
 # pulselive
 
-**Real-time project health for AI agents and developers. One command to check CI, deploys, endpoints, dependencies, and issues.**
+**Real-time project telemetry for AI agents. One command to check CI, deploys, endpoints, dependencies, issues, and code coverage — with trend analysis and anomaly detection.**
 
 ## Why pulselive?
 
-In today's fast-paced development environment, you need instant visibility into your project's health. pulselive provides:
+AI agents can't see live project state. They don't know if CI is flaky, if dependencies are drifting, if coverage is declining, or if endpoints are degrading. PulseLive gives agents the answer in one call — with trend direction, anomaly detection, and prioritised recommendations.
 
-- **Comprehensive checks**: CI/CD status, deployments, endpoint health, git status, issues, and dependencies
-- **AI-agent ready**: Built-in MCP (Model Context Protocol) server for AI agent integration
-- **Developer-friendly**: Simple CLI with colorful output and JSON support
-- **CI/CD integration**: Exit codes for automated workflows
-- **Auto-detection**: Smart configuration detection for GitHub repos and package managers
+- **Agent-first**: Built-in MCP server with 9 tools, every response includes `actionable`, `severity`, `confidence`, `context`
+- **Telemetry**: Trend analysis (improving/stable/degrading), anomaly detection (2σ), velocity tracking
+- **Webhook alerts**: HMAC-signed push notifications on anomalies, degrading trends, flaky CI
+- **8 check modules**: CI, deploy, health, git, issues, PRs, coverage, deps
+- **CI/CD integration**: Exit codes, JSON, JUnit XML output
+- **Security hardened**: SSRF protection, no shell injection, no token leaks
 
 ## Installation
 
@@ -20,104 +21,173 @@ npx pulselive
 npm install -g pulselive
 ```
 
-## Usage
+## Quick Start
 
-### Basic check
+### 1. Initialize configuration
+
+```bash
+cd your-project
+pulselive init
+```
+
+This creates a `.pulselive.yml` file with auto-detected defaults.
+
+### 2. Run a check
+
 ```bash
 pulselive check
 ```
 
-### JSON output
+### 3. Review trends
+
 ```bash
+pulselive trends
+pulselive anomalies
+```
+
+## MCP Server (Agent Interface)
+
+The primary interface for AI agents. Start the MCP server:
+
+```bash
+pulselive mcp
+```
+
+### Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| `pulselive_check` | Full health check (all modules) |
+| `pulselive_ci` | CI status + flakiness score |
+| `pulselive_health` | Endpoint health + latency |
+| `pulselive_deps` | Dependency audit |
+| `pulselive_summary` | Summary + top anomalies + overall trend |
+| `pulselive_trends` | Trend analysis (direction, delta, velocity) |
+| `pulselive_anomalies` | Anomaly detection (2σ from rolling mean) |
+| `pulselive_metrics` | Full telemetry: history + trends + current |
+| `pulselive_recommend` | Prioritised action items ranked by impact |
+
+### Query Parameters
+
+```
+GET /?tool=pulselive_check&include_trends=true
+GET /?tool=pulselive_trends&check_type=deps&window=14
+GET /?tool=pulselive_metrics&check_type=ci
+GET /?tool=pulselive_recommend
+GET /?dir=/path/to/project
+```
+
+### Response Format (Agent-Optimised)
+
+Every MCP response includes structured, actionable data:
+
+```json
+{
+  "type": "deps",
+  "status": "warning",
+  "severity": "warning",
+  "confidence": "high",
+  "actionable": "Update 5 outdated packages — run npm update",
+  "context": "Outdated or vulnerable dependencies are security and stability risks",
+  "message": "5 outdated, 2 vulnerable",
+  "details": { "outdated": 5, "vulnerable": 2, "total": 48 }
+}
+```
+
+### Recommendations
+
+`pulselive_recommend` returns a ranked action list:
+
+```json
+{
+  "recommendations": [
+    {
+      "rank": 1,
+      "checkType": "deps",
+      "severity": "critical",
+      "confidence": "high",
+      "title": "deps check failed",
+      "actionable": "Run npm audit fix to address vulnerabilities",
+      "context": "2 critical vulnerabilities found"
+    },
+    {
+      "rank": 2,
+      "checkType": "ci",
+      "severity": "warning",
+      "confidence": "medium",
+      "title": "Anomaly in ci: flakiness_score",
+      "actionable": "CI anomaly — check for flaky tests or config drift",
+      "context": "Value 60.00 is 3.2σ from mean 8.33"
+    }
+  ]
+}
+```
+
+## CLI Commands
+
+```bash
+# Basic check
+pulselive check
+
+# JSON output
 pulselive check --json
-```
 
-### CI mode (exit 1 on critical issues)
-```bash
-pulselive check --ci
-```
+# Include trends in JSON
+pulselive check --json --include-trends
 
-### Single check type
-```bash
+# JUnit XML (for CI/CD)
+pulselive check --junit
+
+# CI mode (exit 1 on critical)
+pulselive check --fail-on-error
+
+# Verbose output
+pulselive check --verbose
+
+# Compare with previous run
+pulselive check --compare
+
+# Single check type
 pulselive check --type ci
-pulselive check --type health
-pulselive check --type deps
-```
 
-### Initialize configuration
-```bash
+# Trend analysis
+pulselive trends
+pulselive trends --type deps
+pulselive trends --window 14
+pulselive trends --json
+
+# Anomaly detection
+pulselive anomalies
+pulselive anomalies --json
+
+# Run history
+pulselive history
+pulselive history --limit 20
+pulselive history --json
+
+# Initialize config
 pulselive init
+
+# Start MCP server
+pulselive mcp
 ```
-
-### Start MCP server
-```bash
-pulselive mcp --port 3000
-```
-
-## Example Output
-
-```
-PULSELIVE — your project, right now
-
-🔄 CI/CD:
-  ✅ main — All checks passed (3 min ago)
-
-🚀 Deploys:
-  ✅ Production — deployed 2h ago
-
-🌐 Endpoints:
-  ✅ API — 200 (42ms)
-
-📋 Git:
-  Branch: feature/auth
-  Uncommitted: 3 files
-  Recent: "fix: auth token refresh" (2h ago)
-
-🐛 Issues:
-  Open: 23 (3 critical, 5 bugs)
-
-📦 Dependencies:
-  ❌ 2 high vulnerabilities
-  ⚠️  7 outdated packages
-
-📊 Summary: 2 critical, 2 warnings
-```
-
-## MCP Integration
-
-pulselive includes a built-in MCP (Model Context Protocol) server for AI agent integration:
-
-```bash
-pulselive mcp --port 3000
-```
-
-The server exposes these tools:
-
-- `pulselive_check` - Full project health report
-- `pulselive_ci` - CI/CD status only
-- `pulselive_health` - Endpoint health status
-- `pulselive_deps` - Dependency status
-- `pulselive_summary` - Summary statistics
-
-Each tool returns structured JSON for easy AI consumption.
 
 ## Configuration
 
-Create a `.pulselive.yml` file:
+`.pulselive.yml`:
 
 ```yaml
 github:
-  repo: "your-org/your-repo"
-  token: "ghp_your_token_here"
+  repo: owner/repo
+  # token: use GITHUB_TOKEN env var instead
 
 health:
+  allow_local: false
   endpoints:
-    - name: "API"
-      url: "http://localhost:3000/health"
-      timeout: 3000
-    - name: "Admin"
-      url: "http://localhost:3001/health"
-      timeout: 2000
+    - name: api
+      url: https://api.example.com/health
+      timeout: 5000
+      baseline: 200
 
 checks:
   ci: true
@@ -125,41 +195,58 @@ checks:
   git: true
   health: true
   issues: true
+  prs: true
   deploy: true
+  coverage:
+    enabled: true
+    threshold: 80
+    remote:
+      provider: codecov
+
+webhooks:
+  - url: https://hooks.example.com/pulselive
+    events: [anomaly, degrading, flaky, critical]
+    secret: optional-hmac-secret
 ```
 
-## Comparison
+## Check Modules
 
-| Feature | pulselive | GitHub MCP Server | Datadog MCP | DevPulse |
-|---------|-----------|-------------------|-------------|----------|
-| **CLI Support** | ✅ Yes | ❌ No | ❌ No | ✅ Yes |
-| **MCP Server** | ✅ Built-in | ✅ Yes | ✅ Yes | ❌ No |
-| **CI/CD Status** | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| **Deployments** | ✅ Yes | ✅ Yes | ✅ Yes | ❌ No |
-| **Endpoint Health** | ✅ Yes | ❌ No | ✅ Yes | ❌ No |
-| **Git Status** | ✅ Yes | ❌ No | ❌ No | ✅ Yes |
-| **Issues Tracking** | ✅ Yes | ✅ Yes | ❌ No | ✅ Yes |
-| **Dependencies** | ✅ Yes | ❌ No | ❌ No | ✅ Yes |
-| **Auto-detection** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Multi-language** | ✅ Yes | ❌ No | ❌ No | ❌ No |
-| **Open Source** | ✅ MIT | ✅ MIT | ❌ Proprietary | ✅ MIT |
+| Check | What It Does | Key Metrics |
+|-------|-------------|------------|
+| **CI** | GitHub Actions last 10 runs | flakinessScore, trend |
+| **Health** | HTTP endpoint checks + SSRF protection | latency, baseline ratio |
+| **Deps** | npm audit + outdated | vulnerable, outdated |
+| **Coverage** | Local (Istanbul/lcov/Clover) + remote (Codecov/Coveralls) | percentage |
+| **Issues** | GitHub Issues | open, closed |
+| **PRs** | GitHub Pull Requests | open, needsReview, conflicts |
+| **Git** | Branch, uncommitted, divergence | uncommitted, divergence |
+| **Deploy** | GitHub Deployments | status |
 
-## Development
+## Webhook Events
 
-```bash
-# Install dependencies
-npm install
+| Event | Trigger |
+|-------|---------|
+| `critical` | Any check with error status |
+| `anomaly` | Metric exceeds 2σ from rolling mean |
+| `degrading` | Trend direction is degrading |
+| `flaky` | CI flakiness > 30% |
 
-# Build
-npm run build
+Webhooks are HMAC-SHA256 signed when a secret is configured. Payload includes `event`, `checkType`, `severity`, `actionable`, `context`.
 
-# Run tests
-npm test
+## Security
 
-# Start MCP server
-npm start
-```
+- No `execSync` — all child_process uses `execFileSync`
+- SSRF protection — blocks private IPs, loopback, cloud metadata
+- DNS validation — resolves hostnames, blocks banned IPs
+- No token leaks — errors use generic messages, `init` never writes tokens
+- YAML hardening — `schema: 'core'` prevents dangerous types
+- Path traversal blocking — MCP `dir` param validated
+- 64KB config limit, max 20 endpoints, 1-30s timeouts
+
+## Architecture
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for full data flow, types, and conventions.
 
 ## License
 
-MIT © pulselive
+MIT

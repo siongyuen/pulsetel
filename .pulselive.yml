@@ -1,10 +1,17 @@
 github:
-  repo: siongyuen/pulselive
+  repo: "openclaw/openclaw"
   token: ""
+
 health:
   endpoints:
-    - name: API
-      url: http://localhost:3000/health
+    - name: "Test Endpoint"
+      url: "https://httpbin.org/status/200"
+      timeout: 3000
+
 checks:
-  deps: true
+  ci: true
+  deps: false
   git: true
+  health: true
+  issues: true
+  deploy: false

@@ -5,12 +5,37 @@ import { HealthCheck } from './checks/health';
 import { GitCheck } from './checks/git';
 import { IssuesCheck } from './checks/issues';
 import { DepsCheck } from './checks/deps';
+import { CoverageCheck } from './checks/coverage';
+import { PRsCheck } from './checks/prs';
+import { WebhookNotifier } from './webhooks';
 
 export interface CheckResult {
   type: string;
   status: 'success' | 'warning' | 'error';
   message: string;
   details?: any;
+  duration?: number;  // milliseconds
+}
+
+/**
+ * Retry wrapper for checks that make HTTP calls.
+ * Retries up to 2 times on 5xx or rate-limit (429) errors.
+ */
+async function withRetry<T>(fn: () => Promise<T>, maxRetries: number = 2): Promise<T> {
+  let lastError: any;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      // Only retry on network errors or rate limits
+      const isRetryable = !error.status || error.status >= 500 || error.status === 429;
+      if (!isRetryable || attempt === maxRetries) throw error;
+      // Exponential backoff: 1s, 2s
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 export class Scanner {
@@ -23,53 +48,45 @@ export class Scanner {
   async runAllChecks(): Promise<CheckResult[]> {
     const results: CheckResult[] = [];
 
-    // Run CI check
-    if (this.config.checks?.ci !== false) {
-      const ciCheck = new CICheck(this.config);
-      const ciResult = await ciCheck.run();
-      results.push(ciResult);
+    const checks: Array<{ type: string; enabled: boolean; run: () => Promise<CheckResult> }> = [
+      { type: 'ci', enabled: this.config.checks?.ci !== false, run: () => withRetry(() => new CICheck(this.config).run()) },
+      { type: 'deploy', enabled: this.config.checks?.deploy !== false, run: () => withRetry(() => new DeployCheck(this.config).run()) },
+      { type: 'health', enabled: this.config.checks?.health !== false, run: () => new HealthCheck(this.config).run() },
+      { type: 'git', enabled: this.config.checks?.git !== false, run: () => new GitCheck(this.config).run() },
+      { type: 'issues', enabled: this.config.checks?.issues !== false, run: () => withRetry(() => new IssuesCheck(this.config).run()) },
+      { type: 'prs', enabled: this.config.checks?.prs !== false, run: () => withRetry(() => new PRsCheck(this.config).run()) },
+      { type: 'coverage', enabled: this.config.checks?.coverage?.enabled !== false, run: () => new CoverageCheck(this.config).run() },
+      { type: 'deps', enabled: this.config.checks?.deps !== false, run: () => new DepsCheck(this.config).run() },
+    ];
+
+    for (const check of checks) {
+      if (!check.enabled) continue;
+      const startTime = Date.now();
+      try {
+        const result = await check.run();
+        result.duration = Date.now() - startTime;
+        results.push(result);
+      } catch (error) {
+        results.push({
+          type: check.type,
+          status: 'error',
+          message: 'Check failed after retries',
+          duration: Date.now() - startTime
+        });
+      }
     }
 
-    // Run Deploy check
-    if (this.config.checks?.deploy !== false) {
-      const deployCheck = new DeployCheck(this.config);
-      const deployResult = await deployCheck.run();
-      results.push(deployResult);
-    }
-
-    // Run Health check
-    if (this.config.checks?.health !== false) {
-      const healthCheck = new HealthCheck(this.config);
-      const healthResult = await healthCheck.run();
-      results.push(healthResult);
-    }
-
-    // Run Git check
-    if (this.config.checks?.git !== false) {
-      const gitCheck = new GitCheck(this.config);
-      const gitResult = await gitCheck.run();
-      results.push(gitResult);
-    }
-
-    // Run Issues check
-    if (this.config.checks?.issues !== false) {
-      const issuesCheck = new IssuesCheck(this.config);
-      const issuesResult = await issuesCheck.run();
-      results.push(issuesResult);
-    }
-
-    // Run Deps check
-    if (this.config.checks?.deps !== false) {
-      const depsCheck = new DepsCheck(this.config);
-      const depsResult = await depsCheck.run();
-      results.push(depsResult);
-    }
+    // Fire webhook notifications (non-blocking)
+    const notifier = new WebhookNotifier(this.config);
+    notifier.notify(results).catch(() => {
+      // Webhook failures should not affect check results
+    });
 
     return results;
   }
 
   async runSingleCheck(checkType: string): Promise<CheckResult> {
-    const validTypes = ['ci', 'deploy', 'health', 'git', 'issues', 'deps'];
+    const validTypes = ['ci', 'deploy', 'health', 'git', 'issues', 'prs', 'deps', 'coverage'];
     if (!validTypes.includes(checkType)) {
       return {
         type: checkType,
@@ -87,22 +104,38 @@ export class Scanner {
       };
     }
 
+    const startTime = Date.now();
+    let result: CheckResult;
+
+    const retryableCheck = (fn: () => Promise<CheckResult>) => withRetry(fn);
+
     switch (checkType) {
       case 'ci':
-        return new CICheck(this.config).run();
+        result = await retryableCheck(() => new CICheck(this.config).run());
+        break;
       case 'deploy':
-        return new DeployCheck(this.config).run();
+        result = await retryableCheck(() => new DeployCheck(this.config).run());
+        break;
       case 'health':
-        return new HealthCheck(this.config).run();
+        result = await new HealthCheck(this.config).run();
+        break;
       case 'git':
-        return new GitCheck(this.config).run();
+        result = await new GitCheck(this.config).run();
+        break;
       case 'issues':
-        return new IssuesCheck(this.config).run();
-      case 'deps':
-        return new DepsCheck(this.config).run();
+        result = await retryableCheck(() => new IssuesCheck(this.config).run());
+        break;
+      case 'prs':
+        result = await retryableCheck(() => new PRsCheck(this.config).run());
+        break;
+      case 'coverage':
+        result = await new CoverageCheck(this.config).run();
+        break;
       default:
-        // Unreachable but TypeScript needs it
-        return { type: checkType, status: 'error', message: `Unknown check type: ${checkType}` };
+        result = { type: checkType, status: 'error', message: `Unknown check type: ${checkType}` };
     }
+
+    result.duration = Date.now() - startTime;
+    return result;
   }
 }

@@ -1,8 +1,16 @@
 import { PulseliveConfig } from '../config';
 import { CheckResult } from '../scanner';
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { existsSync } from 'fs';
 import path from 'path';
+
+/**
+ * Safely execute an npm command using execFileSync to prevent shell injection.
+ * execFileSync does not spawn a shell — arguments are passed directly to the binary.
+ */
+function npmCmd(args: string[]): string {
+  return execFileSync('npm', args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+}
 
 export class DepsCheck {
   private config: PulseliveConfig;
@@ -14,7 +22,7 @@ export class DepsCheck {
   async run(): Promise<CheckResult> {
     try {
       const packageJsonPath = path.join(process.cwd(), 'package.json');
-      const hasPackageJson = require('fs').existsSync(packageJsonPath);
+      const hasPackageJson = existsSync(packageJsonPath);
 
       if (!hasPackageJson) {
         // Try other package managers
@@ -28,7 +36,7 @@ export class DepsCheck {
       try {
         let auditData: any;
         try {
-          const auditOutput = execSync('npm audit --json', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+          const auditOutput = npmCmd(['audit', '--json']);
           auditData = JSON.parse(auditOutput);
         } catch (error: any) {
           // npm audit exits 1 when vulnerabilities found, but still outputs valid JSON
@@ -57,7 +65,7 @@ export class DepsCheck {
       try {
         let outdatedData: any;
         try {
-          const outdatedOutput = execSync('npm outdated --json', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+          const outdatedOutput = npmCmd(['outdated', '--json']);
           outdatedData = JSON.parse(outdatedOutput);
         } catch (error: any) {
           // npm outdated exits 1 when outdated packages found, but still outputs JSON
@@ -100,15 +108,15 @@ export class DepsCheck {
       return {
         type: 'deps',
         status: 'error',
-        message: `Dependencies check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: 'Dependencies check failed'
       };
     }
   }
 
   private checkOtherPackageManagers(): CheckResult {
-    // Try pip-audit (correct command name)
+    // Try pip-audit
     try {
-      execSync('pip-audit --format json', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+      const output = execFileSync('pip-audit', ['--format', 'json'], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
       return {
         type: 'deps',
         status: 'success',
@@ -136,9 +144,9 @@ export class DepsCheck {
       }
     }
 
-    // Try govulncheck (correct command name)
+    // Try govulncheck
     try {
-      execSync('govulncheck ./...', { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+      execFileSync('govulncheck', ['./...'], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
       return {
         type: 'deps',
         status: 'success',

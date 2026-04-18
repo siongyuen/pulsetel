@@ -63,6 +63,26 @@ vi.mock('../src/checks/deps', () => ({
   }
 }));
 
+vi.mock('../src/checks/prs', () => ({
+  PRsCheck: class {
+    run = vi.fn().mockResolvedValue({
+      type: 'prs',
+      status: 'success',
+      message: 'PRs check passed'
+    });
+  }
+}));
+
+vi.mock('../src/checks/coverage', () => ({
+  CoverageCheck: class {
+    run = vi.fn().mockResolvedValue({
+      type: 'coverage',
+      status: 'success',
+      message: 'Coverage check passed'
+    });
+  }
+}));
+
 describe('Scanner', () => {
   let scanner: Scanner;
   let config: PulseliveConfig;
@@ -75,7 +95,9 @@ describe('Scanner', () => {
         health: true,
         git: true,
         issues: true,
-        deps: true
+        prs: true,
+        deps: true,
+        coverage: { enabled: true }
       }
     };
     scanner = new Scanner(config);
@@ -83,14 +105,16 @@ describe('Scanner', () => {
 
   it('should run all checks when all are enabled', async () => {
     const results = await scanner.runAllChecks();
-    
-    expect(results).toHaveLength(6);
+     
+    expect(results).toHaveLength(8);
     expect(results.some(r => r.type === 'ci')).toBe(true);
     expect(results.some(r => r.type === 'deploy')).toBe(true);
     expect(results.some(r => r.type === 'health')).toBe(true);
     expect(results.some(r => r.type === 'git')).toBe(true);
     expect(results.some(r => r.type === 'issues')).toBe(true);
+    expect(results.some(r => r.type === 'prs')).toBe(true);
     expect(results.some(r => r.type === 'deps')).toBe(true);
+    expect(results.some(r => r.type === 'coverage')).toBe(true);
   });
 
   it('should skip disabled checks', async () => {
@@ -100,20 +124,23 @@ describe('Scanner', () => {
       health: true,
       git: true,
       issues: false,
+      prs: false,
       deps: false
     };
     scanner = new Scanner(config);
-    
+
     const results = await scanner.runAllChecks();
-    
-    expect(results).toHaveLength(2);
+
+    expect(results).toHaveLength(3);
     expect(results.some(r => r.type === 'health')).toBe(true);
     expect(results.some(r => r.type === 'git')).toBe(true);
+    expect(results.some(r => r.type === 'coverage')).toBe(true);
+    expect(results.some(r => r.type === 'prs')).toBe(false);
   });
 
   it('should run single check', async () => {
     const result = await scanner.runSingleCheck('ci');
-    
+
     expect(result.type).toBe('ci');
     expect(result.status).toBe('success');
   });

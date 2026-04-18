@@ -45,7 +45,7 @@ export class IssuesCheck {
         return {
           type: 'issues',
           status: isAuthFailure ? 'warning' : 'error',
-          message: isAuthFailure ? `GitHub auth failed: ${response.statusText}. Check your token.` : `GitHub API error: ${response.statusText}`
+          message: isAuthFailure ? 'GitHub auth failed. Check your token.' : `GitHub API error: ${response.status}`
         };
       }
 
@@ -88,7 +88,7 @@ export class IssuesCheck {
       return {
         type: 'issues',
         status: 'error',
-        message: `Issues check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: 'Issues check failed'
       };
     }
   }

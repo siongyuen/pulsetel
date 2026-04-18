@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "ci": false,
+    "deploy": false,
+    "health": false,
+    "git": false,
+    "issues": false,
+    "deps": false,
+    "coverage": {
+      "enabled": false
+    }
+  }
+}

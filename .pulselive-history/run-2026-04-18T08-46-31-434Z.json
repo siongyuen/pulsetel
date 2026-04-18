@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-04-18T08:46:31.433Z",
+  "results": [
+    {
+      "type": "ci",
+      "status": "warning",
+      "message": "No GitHub token provided, skipping CI check"
+    },
+    {
+      "type": "health",
+      "status": "success",
+      "message": "All endpoints healthy (1 checked)"
+    },
+    {
+      "type": "git",
+      "status": "success",
+      "message": "Git status: master branch"
+    },
+    {
+      "type": "issues",
+      "status": "warning",
+      "message": "No GitHub token provided, skipping issues check"
+    },
+    {
+      "type": "coverage",
+      "status": "warning",
+      "message": "No coverage reports found"
+    }
+  ]
+}

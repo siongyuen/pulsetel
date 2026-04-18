@@ -1,9 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DepsCheck } from '../../src/checks/deps';
 import { PulseliveConfig } from '../../src/config';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
+import { existsSync } from 'fs';
 
 vi.mock('child_process');
+vi.mock('fs', async () => {
+  const actual = await vi.importActual('fs');
+  return {
+    ...actual,
+    existsSync: vi.fn()
+  };
+});
 
 describe('DepsCheck', () => {
   let depsCheck: DepsCheck;
@@ -12,15 +20,19 @@ describe('DepsCheck', () => {
   beforeEach(() => {
     config = {};
     depsCheck = new DepsCheck(config);
+    vi.restoreAllMocks();
   });
 
   it('should return warning when no package.json found', async () => {
-    // Mock fs.existsSync to return false for package.json
-    vi.spyOn(require('fs'), 'existsSync').mockReturnValue(false);
+    (existsSync as any).mockImplementation((p: string) => {
+      return !p.includes('package.json');
+    });
     
-    // Mock execSync to throw errors for other package managers
-    (execSync as any).mockImplementation((command: string) => {
-      throw new Error('Command failed');
+    // Mock execFileSync to throw errors for other package managers
+    (execFileSync as any).mockImplementation(() => {
+      const err: any = new Error('Command failed');
+      err.stdout = '';
+      throw err;
     });
     
     const result = await depsCheck.run();
@@ -31,10 +43,11 @@ describe('DepsCheck', () => {
   });
 
   it('should handle npm audit and outdated with vulnerabilities', async () => {
-    vi.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    (existsSync as any).mockReturnValue(true);
     
-    (execSync as any).mockImplementation((command: string) => {
-      if (command.includes('npm audit')) {
+    (execFileSync as any).mockImplementation((cmd: string, args: string[]) => {
+      const command = args.join(' ');
+      if (command.includes('audit')) {
         const err: any = new Error('exit code 1');
         err.stdout = JSON.stringify({
           vulnerabilities: {
@@ -51,7 +64,7 @@ describe('DepsCheck', () => {
           }
         });
         throw err;
-      } else if (command.includes('npm outdated')) {
+      } else if (command.includes('outdated')) {
         const err: any = new Error('exit code 1');
         err.stdout = JSON.stringify({
           express: { current: '4.18.0', wanted: '4.18.2' },
@@ -70,12 +83,13 @@ describe('DepsCheck', () => {
   });
 
   it('should handle no dependency issues', async () => {
-    vi.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    (existsSync as any).mockReturnValue(true);
     
-    (execSync as any).mockImplementation((command: string) => {
-      if (command.includes('npm audit')) {
+    (execFileSync as any).mockImplementation((cmd: string, args: string[]) => {
+      const command = args.join(' ');
+      if (command.includes('audit')) {
         return JSON.stringify({ vulnerabilities: {}, metadata: { vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0 } } });
-      } else if (command.includes('npm outdated')) {
+      } else if (command.includes('outdated')) {
         return JSON.stringify({});
       }
       return '';
@@ -89,12 +103,13 @@ describe('DepsCheck', () => {
   });
 
   it('should handle npm audit failure gracefully', async () => {
-    vi.spyOn(require('fs'), 'existsSync').mockReturnValue(true);
+    (existsSync as any).mockReturnValue(true);
     
-    (execSync as any).mockImplementation((command: string) => {
-      if (command.includes('npm audit')) {
+    (execFileSync as any).mockImplementation((cmd: string, args: string[]) => {
+      const command = args.join(' ');
+      if (command.includes('audit')) {
         throw new Error('npm audit failed');
-      } else if (command.includes('npm outdated')) {
+      } else if (command.includes('outdated')) {
         return JSON.stringify({});
       }
       return '';

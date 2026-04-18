@@ -1,0 +1,10 @@
+.pulselive-history/
+node_modules/
+src/
+test/
+fixtures/
+coverage/
+tsconfig.json
+.prettierrc
+.eslintrc.json
+vitest.config.*

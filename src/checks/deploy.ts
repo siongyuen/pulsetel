@@ -45,7 +45,7 @@ export class DeployCheck {
         return {
           type: 'deploy',
           status: isAuthFailure ? 'warning' : 'error',
-          message: isAuthFailure ? `GitHub auth failed: ${response.statusText}. Check your token.` : `GitHub API error: ${response.statusText}`
+          message: isAuthFailure ? 'GitHub auth failed. Check your token.' : `GitHub API error: ${response.status}`
         };
       }
 
@@ -89,7 +89,7 @@ export class DeployCheck {
       return {
         type: 'deploy',
         status: 'error',
-        message: `Deploy check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: 'Deploy check failed'
       };
     }
   }

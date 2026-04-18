@@ -1,15 +1,31 @@
 import { Scanner, CheckResult } from './scanner';
 import { ConfigLoader } from './config';
+import { TrendAnalyzer, HistoryEntry } from './trends';
 import { createServer, Server } from 'http';
 import { AddressInfo } from 'net';
+import { resolve, normalize } from 'path';
+import { readFileSync, existsSync, readdirSync, writeFileSync, mkdirSync } from 'fs';
+import { VERSION } from './index';
 
 const VALID_TOOLS = [
   'pulselive_check',
   'pulselive_ci',
   'pulselive_health',
   'pulselive_deps',
-  'pulselive_summary'
+  'pulselive_summary',
+  'pulselive_trends',
+  'pulselive_anomalies',
+  'pulselive_metrics',
+  'pulselive_recommend'
 ];
+
+// MCP usage telemetry
+interface MCPUsageEntry {
+  tool: string;
+  timestamp: string;
+  duration: number;
+  status: 'success' | 'error';
+}
 
 export class MCPServer {
   private configLoader: ConfigLoader;
@@ -22,9 +38,9 @@ export class MCPServer {
   }
 
   private getScanner(dir?: string): Scanner {
-    // If a directory is specified, create a fresh ConfigLoader for that path
     if (dir) {
-      const dirConfigLoader = new ConfigLoader(dir + '/.pulselive.yml');
+      const safeDir = this.validateDir(dir);
+      const dirConfigLoader = new ConfigLoader(safeDir + '/.pulselive.yml');
       const config = dirConfigLoader.autoDetect();
       return new Scanner(config);
     }
@@ -32,9 +48,22 @@ export class MCPServer {
     return new Scanner(config);
   }
 
+  private validateDir(dir: string): string {
+    if (dir.includes('\0')) {
+      throw new Error('Invalid directory path');
+    }
+    const resolved = resolve(normalize(dir));
+    if (resolved.includes('..')) {
+      throw new Error('Directory path traversal not allowed');
+    }
+    if (!resolved.startsWith('/')) {
+      throw new Error('Directory must be an absolute path');
+    }
+    return resolved;
+  }
+
   start(): void {
     this.server = createServer(async (req, res) => {
-      // Set CORS headers for browser-based integrations
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -44,6 +73,8 @@ export class MCPServer {
         res.end();
         return;
       }
+
+      const toolStartTime = Date.now();
 
       try {
         const url = new URL(req.url || '/', `http://${req.headers.host}`);
@@ -57,23 +88,30 @@ export class MCPServer {
 
         if (!VALID_TOOLS.includes(tool)) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: `Unknown tool: ${tool}. Valid tools: ${VALID_TOOLS.join(', ')}` }));
+          res.end(JSON.stringify({ error: 'Unknown tool' }));
+          this.logMCPUsage(tool, toolStartTime, 'error');
           return;
         }
 
         const dir = url.searchParams.get('dir') || undefined;
-        const result = await this.handleToolRequest(tool, dir);
+        const includeTrends = url.searchParams.get('include_trends') === 'true';
+        const checkType = url.searchParams.get('check_type') || undefined;
+        const window = parseInt(url.searchParams.get('window') || '7') || 7;
+
+        const result = await this.handleToolRequest(tool, dir, { includeTrends, checkType, window });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
-      } catch (error) {
+        this.logMCPUsage(tool, toolStartTime, 'success');
+      } catch {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Internal server error' }));
+        this.logMCPUsage('unknown', toolStartTime, 'error');
       }
     });
 
     this.server.listen(this.port, () => {
       const address = this.server?.address() as AddressInfo;
-      console.log(`MCP Server started on port ${address.port}`);
+      console.log(`PulseLive MCP Server v${VERSION} on port ${address.port}`);
     });
   }
 
@@ -84,72 +122,548 @@ export class MCPServer {
     }
   }
 
-  private async handleToolRequest(tool: string, dir?: string): Promise<any> {
+  private async handleToolRequest(tool: string, dir?: string, params?: {
+    includeTrends?: boolean;
+    checkType?: string;
+    window?: number;
+  }): Promise<any> {
     const scanner = this.getScanner(dir);
+    const history = this.loadHistory();
+    const trendAnalyzer = new TrendAnalyzer();
 
     switch (tool) {
       case 'pulselive_check':
-        return this.pulseliveCheck(scanner);
+        return this.pulseliveCheck(scanner, history, trendAnalyzer, params?.includeTrends);
       case 'pulselive_ci':
-        return this.pulseliveCi(scanner);
+        return this.pulseliveSingle(scanner, 'ci', history, trendAnalyzer);
       case 'pulselive_health':
-        return this.pulseliveHealth(scanner);
+        return this.pulseliveSingle(scanner, 'health', history, trendAnalyzer);
       case 'pulselive_deps':
-        return this.pulseliveDeps(scanner);
+        return this.pulseliveSingle(scanner, 'deps', history, trendAnalyzer);
       case 'pulselive_summary':
-        return this.pulseliveSummary(scanner);
+        return this.pulseliveSummary(scanner, history, trendAnalyzer);
+      case 'pulselive_trends':
+        return this.pulseliveTrends(history, trendAnalyzer, params?.checkType, params?.window);
+      case 'pulselive_anomalies':
+        return this.pulseliveAnomalies(history, trendAnalyzer);
+      case 'pulselive_metrics':
+        return this.pulseliveMetrics(history, trendAnalyzer, params?.checkType);
+      case 'pulselive_recommend':
+        return this.pulseliveRecommend(scanner, history, trendAnalyzer);
       default:
-        throw new Error(`Unknown tool: ${tool}`);
+        throw new Error('Unknown tool');
     }
   }
 
-  private async pulseliveCheck(scanner: Scanner): Promise<any> {
+  // ── Tool Implementations (agent-first: structured, actionable, severity, context) ──
+
+  private async pulseliveCheck(
+    scanner: Scanner,
+    history: HistoryEntry[],
+    trendAnalyzer: TrendAnalyzer,
+    includeTrends?: boolean
+  ): Promise<any> {
     const results = await scanner.runAllChecks();
-    return this.formatResults(results);
+    const items = results.map(r => this.enrichResult(r));
+
+    const response: any = {
+      version: VERSION,
+      timestamp: new Date().toISOString(),
+      results: items,
+      summary: this.computeSummary(results)
+    };
+
+    if (includeTrends && history.length > 0) {
+      const checkTypes = new Set<string>();
+      history.forEach(e => e.results.forEach(r => checkTypes.add(r.type)));
+      results.forEach(r => checkTypes.add(r.type));
+      const trends: any = {};
+      for (const ct of checkTypes) {
+        trends[ct] = trendAnalyzer.analyze(ct, history);
+      }
+      response.trends = trends;
+      response.anomalies = trendAnalyzer.detectAnomalies(history);
+    }
+
+    return response;
   }
 
-  private async pulseliveCi(scanner: Scanner): Promise<any> {
-    const result = await scanner.runSingleCheck('ci');
-    return this.formatSingleResult(result);
+  private async pulseliveSingle(
+    scanner: Scanner,
+    type: string,
+    history: HistoryEntry[],
+    trendAnalyzer: TrendAnalyzer
+  ): Promise<any> {
+    const result = await scanner.runSingleCheck(type);
+    const enriched = this.enrichResult(result);
+
+    // Include trend if history available
+    if (history.length > 0) {
+      const trend = trendAnalyzer.analyze(type, history);
+      (enriched as any).trend = trend;
+    }
+
+    return enriched;
   }
 
-  private async pulseliveHealth(scanner: Scanner): Promise<any> {
-    const result = await scanner.runSingleCheck('health');
-    return this.formatSingleResult(result);
-  }
-
-  private async pulseliveDeps(scanner: Scanner): Promise<any> {
-    const result = await scanner.runSingleCheck('deps');
-    return this.formatSingleResult(result);
-  }
-
-  private async pulseliveSummary(scanner: Scanner): Promise<any> {
+  private async pulseliveSummary(
+    scanner: Scanner,
+    history: HistoryEntry[],
+    trendAnalyzer: TrendAnalyzer
+  ): Promise<any> {
     const results = await scanner.runAllChecks();
-    const criticalCount = results.filter(r => r.status === 'error').length;
-    const warningCount = results.filter(r => r.status === 'warning').length;
-    
+    const summary = this.computeSummary(results);
+
+    // Add top anomalies if available
+    if (history.length > 0) {
+      const anomalies = trendAnalyzer.detectAnomalies(history);
+      summary.topAnomalies = anomalies.slice(0, 5);
+      summary.overallTrend = this.computeOverallTrend(results, history, trendAnalyzer);
+    }
+
+    return summary;
+  }
+
+  private pulseliveTrends(
+    history: HistoryEntry[],
+    trendAnalyzer: TrendAnalyzer,
+    checkType?: string,
+    window: number = 7
+  ): any {
+    if (history.length === 0) {
+      return { available: false, reason: 'no_history', actionable: 'Run pulselive check to build history' };
+    }
+
+    if (checkType) {
+      const trend = trendAnalyzer.analyze(checkType, history, window);
+      return {
+        available: true,
+        window,
+        ...trend,
+        actionable: this.trendActionable(checkType, trend),
+        context: this.trendContext(checkType, trend)
+      };
+    }
+
+    const checkTypes = new Set<string>();
+    history.forEach(e => e.results.forEach(r => checkTypes.add(r.type)));
+    const trends: any = {};
+    for (const ct of checkTypes) {
+      const trend = trendAnalyzer.analyze(ct, history, window);
+      trends[ct] = {
+        ...trend,
+        actionable: this.trendActionable(ct, trend),
+        context: this.trendContext(ct, trend)
+      };
+    }
+    return { available: true, window, trends };
+  }
+
+  private pulseliveAnomalies(history: HistoryEntry[], trendAnalyzer: TrendAnalyzer): any {
+    if (history.length === 0) {
+      return { available: false, anomalies: [], actionable: 'Run pulselive check to build history' };
+    }
+
+    const anomalies = trendAnalyzer.detectAnomalies(history);
     return {
-      critical: criticalCount,
-      warnings: warningCount,
-      totalChecks: results.length
+      available: true,
+      count: anomalies.length,
+      anomalies: anomalies.map(a => ({
+        ...a,
+        actionable: this.anomalyActionable(a),
+        context: this.anomalyContext(a)
+      }))
     };
   }
 
-  private formatResults(results: CheckResult[]): any {
-    return results.map(result => ({
-      type: result.type,
-      status: result.status,
-      message: result.message,
-      details: result.details
-    }));
+  private pulseliveMetrics(
+    history: HistoryEntry[],
+    trendAnalyzer: TrendAnalyzer,
+    checkType?: string
+  ): any {
+    if (history.length === 0) {
+      return { available: false, actionable: 'Run pulselive check to build history' };
+    }
+
+    if (checkType) {
+      const trend = trendAnalyzer.analyze(checkType, history);
+      const metricHistory = history
+        .map(e => {
+          const r = e.results.find(r => r.type === checkType);
+          return r ? { timestamp: e.timestamp, status: r.status, metrics: r.metrics, duration: r.duration } : null;
+        })
+        .filter(Boolean);
+
+      return {
+        available: true,
+        checkType,
+        trend,
+        history: metricHistory,
+        actionable: this.trendActionable(checkType, trend),
+        context: this.trendContext(checkType, trend)
+      };
+    }
+
+    // All check types
+    const checkTypes = new Set<string>();
+    history.forEach(e => e.results.forEach(r => checkTypes.add(r.type)));
+    const metrics: any = {};
+    for (const ct of checkTypes) {
+      const trend = trendAnalyzer.analyze(ct, history);
+      metrics[ct] = {
+        trend,
+        latest: history[0]?.results.find(r => r.type === ct) || null
+      };
+    }
+    return { available: true, metrics };
   }
 
-  private formatSingleResult(result: CheckResult): any {
+  private async pulseliveRecommend(
+    scanner: Scanner,
+    history: HistoryEntry[],
+    trendAnalyzer: TrendAnalyzer
+  ): Promise<any> {
+    const results = await scanner.runAllChecks();
+    const recommendations: Array<{
+      rank: number;
+      checkType: string;
+      severity: 'critical' | 'warning' | 'info';
+      confidence: 'high' | 'medium' | 'low';
+      title: string;
+      actionable: string;
+      context: string;
+    }> = [];
+
+    let rank = 1;
+
+    // Critical errors first
+    for (const r of results) {
+      if (r.status === 'error') {
+        recommendations.push({
+          rank: rank++,
+          checkType: r.type,
+          severity: 'critical',
+          confidence: 'high',
+          title: `${r.type} check failed`,
+          actionable: this.errorActionable(r),
+          context: r.message
+        });
+      }
+    }
+
+    // Anomalies from history
+    if (history.length > 0) {
+      const anomalies = trendAnalyzer.detectAnomalies(history);
+      for (const a of anomalies) {
+        recommendations.push({
+          rank: rank++,
+          checkType: a.checkType,
+          severity: a.severity === 'high' ? 'critical' : 'warning',
+          confidence: a.zScore > 3 ? 'high' : 'medium',
+          title: `Anomaly in ${a.checkType}: ${a.metric}`,
+          actionable: this.anomalyActionable(a),
+          context: this.anomalyContext(a)
+        });
+      }
+    }
+
+    // Degrading trends
+    if (history.length > 0) {
+      const checkTypes = new Set<string>();
+      history.forEach(e => e.results.forEach(r => checkTypes.add(r.type)));
+      for (const ct of checkTypes) {
+        const trend = trendAnalyzer.analyze(ct, history);
+        if (trend.direction === 'degrading') {
+          recommendations.push({
+            rank: rank++,
+            checkType: ct,
+            severity: 'warning',
+            confidence: 'medium',
+            title: `${ct} trend degrading`,
+            actionable: this.trendActionable(ct, trend),
+            context: this.trendContext(ct, trend)
+          });
+        }
+      }
+    }
+
+    // Warnings
+    for (const r of results) {
+      if (r.status === 'warning') {
+        recommendations.push({
+          rank: rank++,
+          checkType: r.type,
+          severity: 'warning',
+          confidence: 'high',
+          title: `${r.type}: ${r.message}`,
+          actionable: this.warningActionable(r),
+          context: `Warning reported during ${r.type} check`
+        });
+      }
+    }
+
     return {
+      version: VERSION,
+      timestamp: new Date().toISOString(),
+      totalRecommendations: recommendations.length,
+      recommendations
+    };
+  }
+
+  // ── Enrichment: add actionable, severity, context, confidence to every result ──
+
+  private enrichResult(result: CheckResult): any {
+    const base: any = {
       type: result.type,
       status: result.status,
       message: result.message,
-      details: result.details
+      details: result.details,
+      duration: result.duration,
+      severity: this.statusToSeverity(result.status),
+      confidence: 'high' as const,
+      actionable: '',
+      context: ''
     };
+
+    switch (result.type) {
+      case 'ci':
+        base.actionable = result.status === 'error'
+          ? 'Investigate CI failure — check workflow logs for root cause'
+          : result.status === 'warning'
+            ? 'CI may be flaky — review recent run history for patterns'
+            : 'No action needed';
+        base.context = 'CI status gates merges and deployments';
+        if (result.details?.flakinessScore > 30) {
+          base.severity = 'warning';
+          base.confidence = 'medium';
+          base.context = `CI flakiness at ${result.details.flakinessScore}% — test results are unreliable for gating merges`;
+        }
+        break;
+      case 'deps':
+        base.actionable = result.status === 'error'
+          ? 'Run npm audit fix to address vulnerabilities'
+          : result.status === 'warning'
+            ? `Update ${result.details?.outdated || 'outdated'} packages — run npm update`
+            : 'Dependencies are up to date';
+        base.context = 'Outdated or vulnerable dependencies are security and stability risks';
+        break;
+      case 'issues':
+        base.actionable = result.status === 'warning'
+          ? 'Review open issues — prioritise critical bugs and security reports'
+          : 'No action needed';
+        base.context = 'Open issues indicate known problems that may affect users';
+        break;
+      case 'coverage':
+        base.actionable = result.status === 'error'
+          ? 'Coverage critically low — add tests for core paths before shipping'
+          : result.status === 'warning'
+            ? `Coverage at ${result.details?.percentage?.toFixed(1) || '?'}% — target ${result.details?.threshold || 80}%`
+            : 'Coverage is healthy';
+        base.context = 'Low coverage means untested code paths and higher regression risk';
+        break;
+      case 'health':
+        base.actionable = result.status === 'error'
+          ? 'Endpoint is down — check service health and logs immediately'
+          : result.status === 'warning'
+            ? 'Endpoint responding slowly — investigate resource usage or load'
+            : 'Endpoints are healthy';
+        base.context = 'Endpoint health directly impacts user experience';
+        break;
+      case 'git':
+        base.actionable = 'No action needed';
+        base.context = 'Git status tracks uncommitted changes and branch divergence';
+        break;
+      case 'prs':
+        base.actionable = result.status === 'warning'
+          ? `${result.details?.needsReview || 'Some'} PRs need review — clear the review queue to unblock merges`
+          : 'No action needed';
+        base.context = 'Stale PRs slow delivery and increase merge conflict risk';
+        break;
+      case 'deploy':
+        base.actionable = result.status === 'error'
+          ? 'Deployment failed — check deployment logs and rollback if needed'
+          : 'No action needed';
+        base.context = 'Deployment status indicates whether latest code is live';
+        break;
+      default:
+        base.actionable = 'Review check output';
+        base.context = '';
+    }
+
+    return base;
+  }
+
+  // ── Actionable/Context generators ──
+
+  private statusToSeverity(status: string): 'critical' | 'warning' | 'info' {
+    if (status === 'error') return 'critical';
+    if (status === 'warning') return 'warning';
+    return 'info';
+  }
+
+  private errorActionable(r: CheckResult): string {
+    const actions: Record<string, string> = {
+      ci: 'Check CI workflow logs — resolve build/test failures before merging',
+      deps: 'Run npm audit fix — address critical vulnerabilities immediately',
+      health: 'Endpoint is down — check service logs and restart if needed',
+      coverage: 'Coverage critically low — add tests for core paths before shipping',
+      deploy: 'Deployment failed — check logs and rollback if needed'
+    };
+    return actions[r.type] || `Resolve ${r.type} check failure: ${r.message}`;
+  }
+
+  private warningActionable(r: CheckResult): string {
+    const actions: Record<string, string> = {
+      ci: 'CI may be flaky — review recent run history for patterns and fix unstable tests',
+      deps: `Update outdated packages — run npm update && npm audit fix`,
+      issues: 'Review open issues — prioritise critical bugs and security reports',
+      coverage: `Coverage below threshold — add tests for uncovered paths`,
+      health: 'Endpoint slow — investigate resource usage or scale up',
+      prs: 'Clear PR review queue to unblock merges'
+    };
+    return actions[r.type] || `Review ${r.type} warning: ${r.message}`;
+  }
+
+  private trendActionable(checkType: string, trend: any): string {
+    if (trend.direction === 'degrading') {
+      const actions: Record<string, string> = {
+        ci: 'CI degrading — investigate test stability and flakiness trends',
+        deps: 'Dependencies accumulating — schedule update cycle',
+        issues: 'Issues growing — allocate sprint capacity for bug triage',
+        coverage: 'Coverage declining — add tests for new code paths',
+        health: 'Latency increasing — investigate resource bottlenecks',
+        prs: 'PRs accumulating — increase review capacity'
+      };
+      return actions[checkType] || `${checkType} trend is degrading — investigate and address`;
+    }
+    if (trend.direction === 'improving') {
+      return `No action needed — ${checkType} trend is improving`;
+    }
+    return `${checkType} trend is stable — no action needed`;
+  }
+
+  private trendContext(checkType: string, trend: any): string {
+    const contexts: Record<string, string> = {
+      ci: 'CI stability is critical for reliable merge gating and deployment confidence',
+      deps: 'Dependency drift accumulates technical debt and security exposure over time',
+      issues: 'Growing issue count signals unresolved problems affecting users',
+      coverage: 'Coverage trends predict regression risk — declining coverage = higher risk',
+      health: 'Latency trends indicate infrastructure health and user experience',
+      prs: 'PR accumulation slows delivery velocity and increases conflict risk'
+    };
+    return contexts[checkType] || `Trend direction for ${checkType} indicates overall health trajectory`;
+  }
+
+  private anomalyActionable(anomaly: any): string {
+    const actions: Record<string, string> = {
+      ci: 'CI anomaly — check for infrastructure changes, flaky tests, or config drift',
+      deps: 'Dependency spike — review for forced updates or supply chain concerns',
+      issues: 'Issue spike — may indicate regression from recent release',
+      coverage: 'Coverage anomaly — verify test infrastructure is healthy',
+      health: 'Health endpoint anomaly — possible incident, check monitoring',
+      prs: 'PR volume anomaly — may indicate team capacity issues'
+    };
+    return actions[anomaly.checkType] || `Investigate ${anomaly.checkType} anomaly (z-score: ${anomaly.zScore?.toFixed(2)})`;
+  }
+
+  private anomalyContext(anomaly: any): string {
+    return `${anomaly.metric} at ${typeof anomaly.value === 'number' ? anomaly.value.toFixed(2) : anomaly.value} is ${(anomaly.zScore || 0).toFixed(1)}σ from mean ${typeof anomaly.mean === 'number' ? anomaly.mean.toFixed(2) : anomaly.mean} — unexpected deviation`;
+  }
+
+  // ── Summary helpers ──
+
+  private computeSummary(results: CheckResult[]): any {
+    const critical = results.filter(r => r.status === 'error').length;
+    const warnings = results.filter(r => r.status === 'warning').length;
+    const passing = results.filter(r => r.status === 'success').length;
+
+    return {
+      critical,
+      warnings,
+      passing,
+      totalChecks: results.length,
+      overallStatus: critical > 0 ? 'critical' : warnings > 0 ? 'degraded' : 'healthy'
+    };
+  }
+
+  private computeOverallTrend(results: CheckResult[], history: HistoryEntry[], trendAnalyzer: TrendAnalyzer): any {
+    if (history.length < 2) return { direction: 'unknown', reason: 'insufficient_history' };
+
+    const checkTypes = new Set<string>();
+    history.forEach(e => e.results.forEach(r => checkTypes.add(r.type)));
+    results.forEach(r => checkTypes.add(r.type));
+
+    let improving = 0;
+    let degrading = 0;
+    let stable = 0;
+
+    for (const ct of checkTypes) {
+      const trend = trendAnalyzer.analyze(ct, history);
+      if (trend.direction === 'improving') improving++;
+      else if (trend.direction === 'degrading') degrading++;
+      else stable++;
+    }
+
+    return {
+      direction: degrading > improving ? 'degrading' : improving > degrading ? 'improving' : 'stable',
+      breakdown: { improving, degrading, stable }
+    };
+  }
+
+  // ── MCP self-telemetry ──
+
+  private logMCPUsage(tool: string, startTime: number, status: 'success' | 'error'): void {
+    try {
+      const historyDir = '.pulselive-history';
+      if (!existsSync(historyDir)) {
+        mkdirSync(historyDir, { recursive: true });
+      }
+
+      const entry: MCPUsageEntry = {
+        tool,
+        timestamp: new Date().toISOString(),
+        duration: Date.now() - startTime,
+        status
+      };
+
+      const usagePath = `${historyDir}/mcp-usage.json`;
+      let usage: MCPUsageEntry[] = [];
+      if (existsSync(usagePath)) {
+        try {
+          usage = JSON.parse(readFileSync(usagePath, 'utf8'));
+        } catch { /* corrupted, start fresh */ }
+      }
+
+      usage.push(entry);
+      // Keep last 1000 entries
+      if (usage.length > 1000) usage = usage.slice(-1000);
+
+      writeFileSync(usagePath, JSON.stringify(usage, null, 2));
+    } catch {
+      // Silent — telemetry is best-effort
+    }
+  }
+
+  // ── History loader (same as CLI) ──
+
+  private loadHistory(): HistoryEntry[] {
+    try {
+      const historyDir = '.pulselive-history';
+      if (!existsSync(historyDir)) return [];
+
+      const files = readdirSync(historyDir);
+      const history: HistoryEntry[] = [];
+
+      for (const file of files) {
+        if (file.startsWith('run-') && file.endsWith('.json')) {
+          const content = readFileSync(`${historyDir}/${file}`, 'utf8');
+          history.push(JSON.parse(content));
+        }
+      }
+
+      return history;
+    } catch {
+      return [];
+    }
   }
 }

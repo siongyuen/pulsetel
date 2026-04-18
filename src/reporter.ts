@@ -20,6 +20,59 @@ export class Reporter {
     return JSON.stringify(results, null, 2);
   }
 
+  formatVerbose(results: CheckResult[]): string {
+    let output = 'PULSELIVE \u2014 your project, right now (verbose)\n\n';
+
+    for (const result of results) {
+      const statusIcon = this.getStatusIcon(result.status);
+      const statusColor = this.getStatusColor(result.status);
+      const duration = result.duration ? ` [${result.duration}ms]` : '';
+      output += `${statusIcon} ${statusColor(result.type)}: ${statusColor(result.message)}${duration}\n`;
+      
+      if (result.details) {
+        output += `    ${JSON.stringify(result.details, null, 2).split('\n').join('\n    ')}\n`;
+      }
+      output += '\n';
+    }
+
+    output += this.formatSummary(results);
+    return output;
+  }
+
+  formatJunit(results: CheckResult[]): string {
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<testsuites>\n';
+    xml += '  <testsuite name="pulselive" tests="' + results.length + '">\n';
+    
+    for (const result of results) {
+      const status = result.status;
+      const isFailure = status === 'error';
+      
+      xml += '    <testcase name="' + this.escapeXml(result.type) + '" classname="pulselive.' + result.type + '">';
+      
+      if (isFailure) {
+        xml += '\n      <failure message="' + this.escapeXml(result.message) + '">';
+        xml += this.escapeXml(JSON.stringify(result.details || {}, null, 2));
+        xml += '</failure>';
+      }
+      
+      xml += '\n    </testcase>\n';
+    }
+    
+    xml += '  </testsuite>\n';
+    xml += '</testsuites>';
+    
+    return xml;
+  }
+
+  private escapeXml(text: string): string {
+    return text.replace(/&/g, '&amp;')
+               .replace(/</g, '&lt;')
+               .replace(/>/g, '&gt;')
+               .replace(/"/g, '&quot;')
+               .replace(/'/g, '&apos;');
+  }
+
   private formatColored(results: CheckResult[]): string {
     let output = chalk.bold('PULSELIVE — your project, right now') + '\n\n';
 
@@ -90,7 +143,8 @@ const header = this.getHeader(type);
       case 'health': return 'Endpoints';
       case 'git': return 'Git';
       case 'issues': return 'Issues';
-      case 'deps': return 'Dependencies';
+      case 'prs': return 'Pull Requests';
+      case 'coverage': return 'Coverage';
       default: return type;
     }
   }
@@ -102,7 +156,8 @@ const header = this.getHeader(type);
       'Endpoints': '🌐',
       'Git': '📋',
       'Issues': '🐛',
-      'Dependencies': '📦'
+      'Pull Requests': '🔀',
+      'Coverage': '📊',
     };
     
     const icon = icons[type] || '📊';
@@ -153,6 +208,26 @@ const header = this.getHeader(type);
         if (result.details.outdated > 0) {
           output += `    ⚠️  ${result.details.outdated} outdated packages\n`;
         }
+      } else if (result.type === 'prs' && result.details) {
+        if (result.details.needsReview > 0) {
+          output += `    ⚠️  ${result.details.needsReview} need review\n`;
+        }
+        if (result.details.hasConflicts > 0) {
+          output += `    ❌ ${result.details.hasConflicts} have conflicts\n`;
+        }
+        if (result.details.drafts > 0) {
+          output += `    📝 ${result.details.drafts} drafts\n`;
+        }
+      } else if (result.type === 'health' && result.details) {
+        result.details.forEach((endpoint: any) => {
+          if (endpoint.baseline && endpoint.responseTime > 0) {
+            const ratio = endpoint.responseTime / endpoint.baseline;
+            const baselineMsg = ` (${ratio.toFixed(1)}x baseline of ${endpoint.baseline}ms)`;
+            output += `    ${endpoint.name}: ${endpoint.responseTime}ms${baselineMsg}\n`;
+          } else {
+            output += `    ${endpoint.name}: ${endpoint.responseTime}ms\n`;
+          }
+        });
       }
     }
     return output;

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GitCheck } from '../../src/checks/git';
 import { PulseliveConfig } from '../../src/config';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 vi.mock('child_process');
 
@@ -15,7 +15,7 @@ describe('GitCheck', () => {
   });
 
   it('should handle git errors', async () => {
-    (execSync as any).mockImplementation(() => {
+    (execFileSync as any).mockImplementation(() => {
       throw new Error('Git error');
     });
     
@@ -27,10 +27,11 @@ describe('GitCheck', () => {
   });
 
   it('should return git status information', async () => {
-    (execSync as any).mockImplementation((command: string) => {
+    (execFileSync as any).mockImplementation((cmd: string, args: string[]) => {
+      const command = args.join(' ');
       if (command.includes('rev-parse --abbrev-ref HEAD@{upstream}')) {
         return 'origin/main';
-      } else if (command.includes('rev-parse --abbrev-ref HEAD')) {
+      } else if (command.includes('rev-parse --abbrev-ref HEAD') && args.length === 3) {
         return 'main';
       } else if (command.includes('log --oneline -5')) {
         return 'abc1234 Fix bug\ndef4567 Add feature';
@@ -38,7 +39,7 @@ describe('GitCheck', () => {
         return 'M  file1.txt\nM  file2.txt';
       } else if (command.includes('rev-parse --verify')) {
         return 'found';
-      } else if (command.includes('rev-parse main')) {
+      } else if (command.includes('rev-parse main') && args.length === 3) {
         return 'main-commit-hash';
       } else if (command.includes('rev-parse origin/main')) {
         return 'origin-main-hash';
@@ -60,12 +61,13 @@ describe('GitCheck', () => {
   });
 
   it('should handle divergence detection failure', async () => {
-    (execSync as any).mockImplementation((command: string) => {
+    (execFileSync as any).mockImplementation((cmd: string, args: string[]) => {
+      const command = args.join(' ');
       if (command.includes('rev-parse --abbrev-ref HEAD@{upstream}')) {
         throw new Error('no upstream');
       } else if (command.includes('rev-parse --verify')) {
         throw new Error('branch not found');
-      } else if (command.includes('rev-parse --abbrev-ref HEAD')) {
+      } else if (command.includes('rev-parse --abbrev-ref HEAD') && args.length === 3) {
         return 'feature-branch';
       } else if (command.includes('log --oneline -5')) {
         return 'abc1234 Initial commit';

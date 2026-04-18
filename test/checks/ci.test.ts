@@ -42,7 +42,7 @@ describe('CICheck', () => {
     
     (fetch as any).mockResolvedValue({
       ok: false,
-      statusText: 'Not Found'
+      status: 404
     });
     
     const result = await ciCheck.run();
