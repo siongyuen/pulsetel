@@ -70,6 +70,6 @@ describe('GitCheck', () => {
     
     expect(result.type).toBe('git');
     expect(result.status).toBe('warning');
-    expect(result.message).toContain('Not a git repository — git-dependent checks skipped');
+    expect(result.message).toContain('⚠ Not a git repository — git-dependent checks (CI, PRs, issues) skipped');
   });
 });

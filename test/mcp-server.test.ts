@@ -82,6 +82,30 @@ describe('MCPServer', () => {
     });
   });
 
+  describe('tool parameter validation', () => {
+    it('source code validates required parameters for each tool', () => {
+      const source = fs.readFileSync(sourcePath, 'utf8');
+      expect(source).toContain('getRequiredParamsForTool');
+      expect(source).toContain("Missing required parameter 'dir' for tool");
+    });
+
+    it('defines required parameters for directory-based tools', () => {
+      const source = fs.readFileSync(sourcePath, 'utf8');
+      const toolsWithDir = ['pulselive_check', 'pulselive_quick', 'pulselive_ci', 'pulselive_health', 'pulselive_deps', 'pulselive_summary', 'pulselive_recommend'];
+      toolsWithDir.forEach(tool => {
+        expect(source).toContain(`'${tool}': ['dir']`);
+      });
+    });
+
+    it('defines no required parameters for trend-based tools', () => {
+      const source = fs.readFileSync(sourcePath, 'utf8');
+      const toolsWithoutDir = ['pulselive_trends', 'pulselive_anomalies', 'pulselive_metrics'];
+      toolsWithoutDir.forEach(tool => {
+        expect(source).toContain(`'${tool}': []`);
+      });
+    });
+  });
+
   describe('MCP server startup', () => {
     it('mcp command is registered in CLI', () => {
       const source = fs.readFileSync(indexPath, 'utf8');

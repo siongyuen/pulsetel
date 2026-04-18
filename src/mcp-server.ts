@@ -63,6 +63,24 @@ export class MCPServer {
     return resolved;
   }
 
+  private getRequiredParamsForTool(tool: string): string[] {
+    // Define required parameters for each tool
+    const toolParams: Record<string, string[]> = {
+      'pulselive_check': ['dir'],
+      'pulselive_quick': ['dir'],
+      'pulselive_ci': ['dir'],
+      'pulselive_health': ['dir'],
+      'pulselive_deps': ['dir'],
+      'pulselive_summary': ['dir'],
+      'pulselive_recommend': ['dir'],
+      'pulselive_trends': [],
+      'pulselive_anomalies': [],
+      'pulselive_metrics': []
+    };
+    
+    return toolParams[tool] || [];
+  }
+
   start(): void {
     this.server = createServer(async (req, res) => {
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -98,6 +116,17 @@ export class MCPServer {
         const includeTrends = url.searchParams.get('include_trends') === 'true';
         const checkType = url.searchParams.get('check_type') || undefined;
         const window = parseInt(url.searchParams.get('window') || '7') || 7;
+
+        // Validate required parameters for each tool
+        const requiredParams = this.getRequiredParamsForTool(tool);
+        for (const param of requiredParams) {
+          if (param === 'dir' && !dir) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `Missing required parameter 'dir' for tool '${tool}'` }));
+            this.logMCPUsage(tool, toolStartTime, 'error');
+            return;
+          }
+        }
 
         const result = await this.handleToolRequest(tool, dir, { includeTrends, checkType, window });
         res.writeHead(200, { 'Content-Type': 'application/json' });
