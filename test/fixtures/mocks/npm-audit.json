@@ -1,0 +1,52 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "lodash": {
+      "name": "lodash",
+      "severity": "high",
+      "isDirect": true,
+      "via": ["prototype-pollution"],
+      "effects": [],
+      "range": ">=4.0.0 <4.17.21",
+      "nodes": ["node_modules/lodash"],
+      "fixAvailable": {
+        "name": "lodash",
+        "version": "4.17.21",
+        "isSemVerMajor": false
+      }
+    },
+    "moment": {
+      "name": "moment",
+      "severity": "medium",
+      "isDirect": true,
+      "via": ["regular-expression-denial-of-service"],
+      "effects": [],
+      "range": ">=2.0.0 <2.29.4",
+      "nodes": ["node_modules/moment"],
+      "fixAvailable": {
+        "name": "moment",
+        "version": "2.29.4",
+        "isSemVerMajor": false
+      }
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 1,
+      "high": 1,
+      "critical": 0,
+      "total": 2
+    },
+    "dependencies": {
+      "prod": 3,
+      "dev": 1,
+      "optional": 0,
+      "peer": 0,
+      "peerOptional": 0,
+      "total": 4
+    },
+    "totalDependencies": 4
+  }
+}

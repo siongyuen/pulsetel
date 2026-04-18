@@ -1,0 +1,23 @@
+{
+  "express": {
+    "current": "4.18.0",
+    "wanted": "4.18.2",
+    "latest": "4.18.2",
+    "dependent": "sample-project",
+    "location": "sample-project"
+  },
+  "lodash": {
+    "current": "4.17.21",
+    "wanted": "4.17.21",
+    "latest": "4.17.21",
+    "dependent": "sample-project",
+    "location": "sample-project"
+  },
+  "moment": {
+    "current": "2.29.0",
+    "wanted": "2.29.4",
+    "latest": "2.29.4",
+    "dependent": "sample-project",
+    "location": "sample-project"
+  }
+}
