@@ -269,6 +269,8 @@ export class MCPServer {
     const items = results.map(r => this.enrichResult(r));
 
     const response: any = {
+      schema_version: "1.0.0",
+      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       results: items,
@@ -305,6 +307,8 @@ export class MCPServer {
     const items = results.map(r => this.enrichResult(r));
 
     const response: any = {
+      schema_version: "1.0.0",
+      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       quick: true,
@@ -346,7 +350,11 @@ export class MCPServer {
       (enriched as any).trend = trend;
     }
 
-    return enriched;
+    return {
+      schema_version: "1.0.0",
+      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      ...enriched
+    };
   }
 
   private async pulseliveSummary(
@@ -364,7 +372,13 @@ export class MCPServer {
       summary.overallTrend = this.computeOverallTrend(results, history, trendAnalyzer);
     }
 
-    return summary;
+    return {
+      schema_version: "1.0.0",
+      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      version: VERSION,
+      timestamp: new Date().toISOString(),
+      ...summary
+    };
   }
 
   private pulseliveTrends(

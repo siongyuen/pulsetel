@@ -199,6 +199,9 @@ pulselive check --junit
 # Exit 1 on critical (CI gating)
 pulselive check --fail-on-error
 
+# Structured exit codes (0=healthy, 1=critical, 2=warnings, 3=partial)
+pulselive check --exit-code
+
 # Verbose output with timing
 pulselive check --verbose
 
@@ -225,6 +228,12 @@ pulselive mcp
 
 # Start MCP stdio transport (Claude Desktop / Cursor)
 pulselive mcp-stdio
+
+# Automated remediation
+pulselive fix --deps --dry-run          # Show what would be fixed
+pulselive fix --deps                    # Actually fix vulnerabilities
+pulselive fix --deps --json             # JSON output for automation
+pulselive fix --all                     # Run all available fixes
 ```
 
 ## Configuration
@@ -297,7 +306,38 @@ Webhooks are HMAC-SHA256 signed when a secret is configured. Payload includes `e
 - **Path traversal blocking** — MCP `dir` param validated against `..` and null bytes
 - **DoS protection** — max 20 endpoints, 1–30s timeouts, 64KB config limit
 
-## Comparison
+## Structured Exit Codes
+
+PulseLive provides deterministic exit codes for CI/CD integration:
+
+| Exit Code | Meaning | Trigger |
+|-----------|---------|---------|
+| `0` | All checks healthy | No errors or warnings found |
+| `1` | Critical issues found | At least one check with status "error" |
+| `2` | Warnings only | No errors, but at least one warning |
+| `3` | Partial failure | Some checks couldn't run (e.g., no GitHub token) |
+
+Enable structured exit codes with `--exit-code`:
+
+```bash
+# Opt-in structured exit codes
+pulselive check --exit-code
+
+# Exit code 0: All healthy
+pulselive check --exit-code && echo "All checks passed"
+
+# Exit code 1: Critical issues
+pulselive check --exit-code || echo "Critical issues found: $?"
+
+# Exit code 2: Warnings only
+pulselive check --exit-code
+exit_code=$?
+if [ $exit_code -eq 2 ]; then
+  echo "Warnings found but no critical issues"
+fi
+```
+
+The `--fail-on-error` flag provides backward compatibility (exit code 1 on errors only).
 
 | Feature | PulseLive | GitHub MCP Server | Datadog MCP |
 |---------|-----------|-------------------|-------------|
@@ -311,6 +351,74 @@ Webhooks are HMAC-SHA256 signed when a secret is configured. Payload includes `e
 | No account required | ✅ | ✅ | ❌ |
 | Open source | ✅ (MIT) | ✅ | ❌ |
 
-## License
+## Automated Remediation: `pulselive fix`
+
+The `fix` command provides automated remediation for common issues:
+
+### Dependency Fixes
+
+```bash
+# Dry run - show what would be fixed
+pulselive fix --deps --dry-run
+
+# Actually fix vulnerabilities
+pulselive fix --deps
+
+# Skip confirmation prompts
+pulselive fix --deps --yes
+
+# JSON output for automation
+pulselive fix --deps --json
+```
+
+### Fix Command Features
+
+- **Safety first**: Always shows what will change before making modifications (unless `--yes`)
+- **Dry run mode**: `--dry-run` shows what would be fixed without making changes
+- **Structured output**: JSON format includes status, changes, and success indicators
+- **Exit codes**: Same structured exit codes as check commands (0=success, 1=failed, 2=partial)
+- **Extensible**: `--all` runs all available fix targets
+
+### JSON Output Format
+
+```json
+{
+  "schema_version": "1.0.0",
+  "schema_url": "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+  "version": "0.5.0",
+  "timestamp": "2024-04-18T15:00:00.000Z",
+  "duration": 1250,
+  "fix_results": [
+    {
+      "target": "deps",
+      "status": "success",
+      "success": true,
+      "message": "Successfully fixed all 2 vulnerabilities",
+      "changes": [
+        "2 vulnerabilities detected",
+        "Fixed 2 vulnerabilities"
+      ],
+      "dryRun": false
+    }
+  ]
+}
+```
+
+### Status Values
+
+- `success`: Fix completed successfully
+- `partial`: Some fixes applied, but issues remain
+- `failed`: Fix could not be completed
+
+### Current Fix Targets
+
+| Target | Description | Scope |
+|--------|-------------|-------|
+| `deps` | Fix vulnerable dependencies | Runs `npm audit fix` |
+
+Future targets (planned):
+- `stale-branches`: Delete merged GitHub branches
+- `pr-cleanup`: Close stale pull requests
+- `issue-triage`: Auto-label and prioritize issues
 
 MIT

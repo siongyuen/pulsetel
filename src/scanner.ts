@@ -15,6 +15,10 @@ export interface CheckResult {
   message: string;
   details?: any;
   duration?: number;  // milliseconds
+  severity?: 'low' | 'medium' | 'high' | 'critical';
+  confidence?: 'low' | 'medium' | 'high';
+  actionable?: string;
+  context?: string;
 }
 
 /**
