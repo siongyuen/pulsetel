@@ -87,6 +87,141 @@ export class ConfigLoader {
     }
   }
 
+  validateConfig(): { valid: boolean; warnings: string[] } {
+    const warnings: string[] = [];
+    const config = this.getConfig();
+    
+    // Check for unknown top-level keys
+    const validTopLevelKeys = ['github', 'health', 'checks', 'webhooks'];
+    const configKeys = Object.keys(config);
+    
+    for (const key of configKeys) {
+      if (!validTopLevelKeys.includes(key)) {
+        warnings.push(`Unknown top-level key: "${key}"`);
+      }
+    }
+    
+    // Validate github section
+    if (config.github) {
+      const githubKeys = Object.keys(config.github);
+      const validGithubKeys = ['repo', 'token'];
+      for (const key of githubKeys) {
+        if (!validGithubKeys.includes(key)) {
+          warnings.push(`Unknown github key: "${key}"`);
+        }
+      }
+      
+      if (config.github.repo && !GITHUB_REPO_PATTERN.test(config.github.repo)) {
+        warnings.push(`Invalid GitHub repo format: "${config.github.repo}" — expected "owner/repo"`);
+      }
+    }
+    
+    // Validate health section
+    if (config.health) {
+      const healthKeys = Object.keys(config.health);
+      const validHealthKeys = ['allow_local', 'endpoints'];
+      for (const key of healthKeys) {
+        if (!validHealthKeys.includes(key)) {
+          warnings.push(`Unknown health key: "${key}"`);
+        }
+      }
+      
+      if (config.health.endpoints) {
+        for (let i = 0; i < config.health.endpoints.length; i++) {
+          const endpoint = config.health.endpoints[i];
+          const validEndpointKeys = ['name', 'url', 'timeout', 'baseline'];
+          const endpointKeys = Object.keys(endpoint);
+          
+          for (const key of endpointKeys) {
+            if (!validEndpointKeys.includes(key)) {
+              warnings.push(`Unknown endpoint key in position ${i}: "${key}"`);
+            }
+          }
+          
+          if (!endpoint.url) {
+            warnings.push(`Endpoint at position ${i} is missing required "url" field`);
+          }
+        }
+      }
+    }
+    
+    // Validate checks section
+    if (config.checks) {
+      const checksKeys = Object.keys(config.checks);
+      const validChecksKeys = ['ci', 'deps', 'git', 'health', 'issues', 'deploy', 'prs', 'coverage'];
+      
+      for (const key of checksKeys) {
+        if (!validChecksKeys.includes(key)) {
+          warnings.push(`Unknown checks key: "${key}"`);
+        }
+      }
+      
+      // Validate coverage section if it exists
+      if (config.checks.coverage && typeof config.checks.coverage === 'object') {
+        const coverageKeys = Object.keys(config.checks.coverage);
+        const validCoverageKeys = ['enabled', 'threshold', 'remote'];
+        
+        for (const key of coverageKeys) {
+          if (!validCoverageKeys.includes(key)) {
+            warnings.push(`Unknown coverage key: "${key}"`);
+          }
+        }
+        
+        if (config.checks.coverage.threshold !== undefined && 
+            (typeof config.checks.coverage.threshold !== 'number' || 
+             config.checks.coverage.threshold < 0 || 
+             config.checks.coverage.threshold > 100)) {
+          warnings.push(`Coverage threshold should be a number between 0 and 100`);
+        }
+        
+        // Validate remote section
+        if (config.checks.coverage.remote) {
+          const remoteKeys = Object.keys(config.checks.coverage.remote);
+          const validRemoteKeys = ['provider', 'repo', 'token'];
+          
+          for (const key of remoteKeys) {
+            if (!validRemoteKeys.includes(key)) {
+              warnings.push(`Unknown remote coverage key: "${key}"`);
+            }
+          }
+          
+          if (config.checks.coverage.remote.provider && 
+              !['codecov', 'coveralls'].includes(config.checks.coverage.remote.provider)) {
+            warnings.push(`Invalid coverage provider: "${config.checks.coverage.remote.provider}" — expected "codecov" or "coveralls"`);
+          }
+        }
+      }
+    }
+    
+    // Validate webhooks section
+    if (config.webhooks) {
+      for (let i = 0; i < config.webhooks.length; i++) {
+        const webhook = config.webhooks[i];
+        const validWebhookKeys = ['url', 'events', 'secret'];
+        const webhookKeys = Object.keys(webhook);
+        
+        for (const key of webhookKeys) {
+          if (!validWebhookKeys.includes(key)) {
+            warnings.push(`Unknown webhook key in position ${i}: "${key}"`);
+          }
+        }
+        
+        if (!webhook.url) {
+          warnings.push(`Webhook at position ${i} is missing required "url" field`);
+        }
+        
+        if (webhook.events && !Array.isArray(webhook.events)) {
+          warnings.push(`Webhook at position ${i}: "events" should be an array`);
+        }
+      }
+    }
+    
+    return {
+      valid: warnings.length === 0,
+      warnings
+    };
+  }
+
   getConfig(): PulseliveConfig {
     return this.config;
   }
@@ -99,7 +234,12 @@ export class ConfigLoader {
       try {
         // Use execFileSync to prevent shell injection via repo URL
         const gitRemote = execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-        const match = gitRemote.match(/github\.com[:\/]([^\/]+)\/([^\/]+?)(\.git)?$/);
+        
+        // Handle both SSH and HTTPS URLs
+        const sshMatch = gitRemote.match(/git@github\.com:([^\/]+)\/([^\/]+?)(?:\.git)?$/);
+        const httpsMatch = gitRemote.match(/https:\/\/github\.com\/([^\/]+)\/([^\/]+?)(?:\.git)?$/);
+        
+        const match = sshMatch || httpsMatch;
         if (match) {
           detectedConfig.github = {
             ...detectedConfig.github,

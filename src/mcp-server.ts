@@ -110,7 +110,34 @@ export class MCPServer {
       }
     });
 
-    this.server.listen(this.port, () => {
+    this.tryStartServer();
+  }
+
+  private tryStartServer(attempt: number = 0): void {
+    const portsToTry = [3000, 3001, 3002, 3003, 3004, 3005, 3006, 3007, 3008, 3009, 3010];
+    const portToTry = portsToTry[attempt] || this.port;
+
+    if (!this.server) {
+      console.error('Server instance not created');
+      return;
+    }
+
+    this.server.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        if (attempt < portsToTry.length - 1) {
+          console.warn(`Port ${portToTry} is in use, trying port ${portsToTry[attempt + 1]}...`);
+          this.tryStartServer(attempt + 1);
+        } else {
+          console.error(`All ports from 3000-3010 are in use. Cannot start MCP server.`);
+          process.exit(1);
+        }
+      } else {
+        console.error(`Failed to start server on port ${portToTry}:`, error.message);
+        process.exit(1);
+      }
+    });
+
+    this.server.listen(portToTry, () => {
       const address = this.server?.address() as AddressInfo;
       console.log(`PulseLive MCP Server v${VERSION} on port ${address.port}`);
     });

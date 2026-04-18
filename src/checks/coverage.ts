@@ -101,11 +101,44 @@ export class CoverageCheck {
       }
     }
 
+    // Try alternative Istanbul location
+    const istanbulAltPath = path.join('coverage', 'coverage-final.json');
+    if (existsSync(istanbulAltPath)) {
+      try {
+        const summary = this.parseIstanbulCoverage(istanbulAltPath);
+        if (summary) return { ...summary, source: 'istanbul' };
+      } catch (error) {
+        // Parse failure
+      }
+    }
+
+    // Try .nyc_output/out.json
+    const nycOutputPath = path.join('.nyc_output', 'out.json');
+    if (existsSync(nycOutputPath)) {
+      try {
+        const summary = this.parseIstanbulCoverage(nycOutputPath);
+        if (summary) return { ...summary, source: 'nyc' };
+      } catch (error) {
+        // Parse failure
+      }
+    }
+
     // Try lcov.info
     const lcovPath = path.join('coverage', 'lcov.info');
     if (existsSync(lcovPath)) {
       try {
         const lcovData = this.parseLcovCoverage(lcovPath);
+        if (lcovData) return { ...lcovData, source: 'lcov' };
+      } catch (error) {
+        // Parse failure
+      }
+    }
+
+    // Try alternative lcov location
+    const lcovAltPath = path.join('lcov.info');
+    if (existsSync(lcovAltPath)) {
+      try {
+        const lcovData = this.parseLcovCoverage(lcovAltPath);
         if (lcovData) return { ...lcovData, source: 'lcov' };
       } catch (error) {
         // Parse failure
@@ -118,6 +151,17 @@ export class CoverageCheck {
       try {
         const cloverData = this.parseCloverCoverage(cloverPath);
         if (cloverData) return { ...cloverData, source: 'clover' };
+      } catch (error) {
+        // Parse failure
+      }
+    }
+
+    // Try Jest coverage json
+    const jestPath = path.join('coverage', 'coverage.json');
+    if (existsSync(jestPath)) {
+      try {
+        const summary = this.parseJestCoverage(jestPath);
+        if (summary) return { ...summary, source: 'jest' };
       } catch (error) {
         // Parse failure
       }
@@ -253,6 +297,32 @@ export class CoverageCheck {
     }
 
     return null;
+  }
+
+  private parseJestCoverage(filePath: string): {
+    lines: number;
+    statements: number;
+    functions: number;
+    branches: number;
+  } | null {
+    try {
+      const content = readFileSync(filePath, 'utf8');
+      const coverageData = JSON.parse(content);
+      
+      // Jest coverage format has totals field
+      if (coverageData?.totals) {
+        return {
+          lines: coverageData.totals.lines.pct,
+          statements: coverageData.totals.statements.pct,
+          functions: coverageData.totals.functions.pct,
+          branches: coverageData.totals.branches.pct
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
 
   private parseIstanbulCoverage(filePath: string): {

@@ -292,13 +292,62 @@ program
         const statusIcon = result.status === 'success' ? '✅' : result.status === 'warning' ? '⚠️' : '❌';
         console.log(`   ${statusIcon} ${result.type}: ${result.message}`);
       });
-      console.log('');
+      console.log("");
     });
+  });
+program
+  .command('auth')
+  .description('Guide users through GitHub token setup')
+  .action(() => {
+    console.log('🔐 PulseLive GitHub Token Setup');
+    console.log('================================\n');
+    console.log('PulseLive needs a GitHub token to access private repositories and API rate limits.');
+    console.log('');
+    console.log('📋 Steps to create a GitHub token:');
+    console.log('');
+    console.log('1. Go to: https://github.com/settings/tokens');
+    console.log('2. Click "Generate new token" → "Generate new token (classic)"');
+    console.log('3. Give your token a descriptive name (e.g., "PulseLive")');
+    console.log('4. Select these scopes:');
+    console.log('   - repo (full control of private repositories)');
+    console.log('   - read:org (read org and team membership)');
+    console.log('   - read:user (read user profile)');
+    console.log('5. Click "Generate token" at the bottom');
+    console.log('');
+    console.log('🔑 Token setup options:');
+    console.log('');
+    console.log('Option 1: Environment variable (recommended)');
+    console.log('  Add to your shell config (~/.bashrc, ~/.zshrc, etc.):');
+    console.log('  export GITHUB_TOKEN="your_token_here"');
+    console.log('  Then run: source ~/.bashrc (or restart terminal)');
+    console.log('');
+    console.log('Option 2: .env file');
+    console.log('  Create a .env file in your project root:');
+    console.log('  GITHUB_TOKEN=your_token_here');
+    console.log('  Then install dotenv: npm install dotenv');
+    console.log('  And add this to your entry file:');
+    console.log('  require("dotenv").config();');
+    console.log('');
+    console.log('Option 3: Direct in .pulselive.yml (not recommended)');
+    console.log('  Add to your .pulselive.yml:');
+    console.log('  github:');
+    console.log('    repo: owner/repo');
+    console.log('    token: your_token_here');
+    console.log('  ⚠️  Warning: This commits the token to your repo history!');
+    console.log('');
+    console.log('✅ Verify your token works:');
+    console.log('  Run: pulselive check');
+    console.log('  If you see GitHub API data, your token is working!');
+    console.log('');
+    console.log('🔒 Security reminder:');
+    console.log('- Never commit tokens to version control');
+    console.log('- Use environment variables for best security');
+    console.log('- Rotate tokens regularly');
+    console.log('- Revoke tokens when no longer needed');
   });
 
 program
   .command('mcp')
-  .description('Start the MCP HTTP server for AI agents')
   .action(() => {
     const configLoader = new ConfigLoader();
     const mcpServer = new MCPServer(configLoader);
