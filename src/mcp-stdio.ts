@@ -187,6 +187,19 @@ const TOOLS = [
     }
   },
   {
+    name: 'pulselive_recommend',
+    description: 'Get prioritised actionable recommendations ranked by severity and confidence. Returns a ranked list of what to fix first, with specific actions and context.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dir: {
+          type: 'string',
+          description: 'Absolute path to the project directory. Defaults to cwd.'
+        }
+      }
+    }
+  },
+  {
     name: 'pulselive_status',
     description: 'Lightweight health ping — reads most recent check result from history (no API calls, no network). Returns immediately with healthy boolean, critical/warning counts, and last check timestamp. Sub-10ms response time.',
     inputSchema: {

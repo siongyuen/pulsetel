@@ -37,7 +37,7 @@ describe('MCPStdioServer', () => {
     expect(response.jsonrpc).toBe('2.0');
     expect(response.id).toBe(2);
     expect(response.result.tools).toBeDefined();
-    expect(response.result.tools.length).toBe(10);
+    expect(response.result.tools.length).toBe(11);
 
     const toolNames = response.result.tools.map((t: any) => t.name);
     expect(toolNames).toContain('pulselive_check');
