@@ -1,6 +1,6 @@
 {
   "name": "@siongyuencheah/pulselive",
-  "version": "0.6.0",
+  "version": "1.0.0",
   "description": "Real-time project telemetry for AI agents and developers. One command to check CI, deploys, endpoints, dependencies, and issues.",
   "main": "dist/index.js",
   "bin": {
