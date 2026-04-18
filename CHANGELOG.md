@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2-0-0.html).
 
 ## [0.3.0] - 2026-04-18
+## [1.0.1] - 2026-04-19
+
+### Fixed
+- **P0: Path traversal vulnerability** in MCP server — `validateDir()` now uses `path.resolve()` + `path.normalize()`, rejects `..`, null bytes, relative paths, and escape attempts
+- **P0: Trends/Anomalies crash** — TypeError on cold start replaced with friendly message: "📊 Insufficient data — need at least 3/5 data points"
+- **P0: Status crash** — TypeError on missing history replaced with: "No status history found. Run `pulselive check` first to establish a baseline."
+
 
 ### Added - Telemetry Focus
 - **Trend analysis engine** (`src/trends.ts`) - TrendAnalyzer with direction, delta, anomaly (2 sigma), velocity

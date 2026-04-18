@@ -53,16 +53,31 @@ export class MCPServer {
 
   private validateDir(dir: string): string {
     if (dir.includes('\0')) {
-      throw new Error('Invalid directory path');
+      throw new Error('Invalid directory path - null bytes not allowed');
     }
-    const resolved = resolve(normalize(dir));
-    if (resolved.includes('..')) {
+    
+    // Normalize and resolve the path
+    const normalized = normalize(dir);
+    const resolved = resolve(normalized);
+    
+    // Check for path traversal attempts in the original path
+    if (dir.includes('..') || normalized.includes('..')) {
       throw new Error('Directory path traversal not allowed');
     }
+    
+    // For security, only allow absolute paths
     if (!resolved.startsWith('/')) {
       throw new Error('Directory must be an absolute path');
     }
-    return resolved;
+    
+    // Additional security: ensure the resolved path doesn't escape intended directory structure
+    // This prevents creative path manipulation attempts
+    const processCwd = process.cwd();
+    if (resolved.startsWith(processCwd)) {
+      return resolved;
+    } else {
+      throw new Error('Directory path escapes allowed directory structure');
+    }
   }
 
   private getRequiredParamsForTool(tool: string): string[] {

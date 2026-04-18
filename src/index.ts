@@ -299,7 +299,7 @@ program
   .action(async (options) => {
     const history = loadHistory();
     if (history.length === 0) {
-      console.log('No history available for trend analysis. Run `pulselive check` first.');
+      console.log('📊 Insufficient data — need at least 3 data points for trend analysis');
       return;
     }
 
@@ -370,7 +370,7 @@ program
   .action(async (options) => {
     const history = loadHistory();
     if (history.length === 0) {
-      console.log('No history available. Run `pulselive check` first.');
+      console.log('📊 Insufficient data — need at least 3 data points for anomaly detection');
       return;
     }
 
@@ -654,10 +654,10 @@ program
           version: VERSION,
           timestamp: new Date().toISOString(),
           healthy: null,
-          message: "No history available. Run 'pulselive check' first to establish baseline."
+          message: "No status history found. Run `pulselive check` first to establish a baseline."
         }, null, 2));
       } else {
-        console.log('❌ No history available — run `pulselive check` first');
+        console.log('No status history found. Run `pulselive check` first to establish a baseline.');
       }
       process.exit(0);
     }
