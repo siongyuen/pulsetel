@@ -185,6 +185,12 @@ program
       return;
     }
 
+    // Check for insufficient data
+    if (history.length < 3) {
+      console.log(`📊 Insufficient data for trend analysis — run \`pulselive check\` a few more times to establish a baseline (currently have ${history.length} data points, need at least 3)`);
+      return;
+    }
+
     const trendAnalyzer = new TrendAnalyzer();
     const window = parseInt(options.window) || 7;
 
@@ -233,6 +239,12 @@ program
     const history = loadHistory();
     if (history.length === 0) {
       console.log('No history available. Run `pulselive check` first.');
+      return;
+    }
+
+    // Check for insufficient data for anomaly detection
+    if (history.length < 5) {
+      console.log(`📊 Insufficient data for anomaly detection — need at least 5 data points for statistical analysis (currently have ${history.length})`);
       return;
     }
 
