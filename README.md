@@ -1,36 +1,46 @@
-# pulselive
+# PulseLive
 
-**Real-time project telemetry for AI agents. One command to check CI, deploys, endpoints, dependencies, issues, and code coverage — with trend analysis and anomaly detection.**
+**Real-time project telemetry for AI agents and developers. One command to check CI, deploys, endpoints, dependencies, and issues — with trend analysis and anomaly detection.**
 
-## Why pulselive?
+## Why PulseLive?
 
-AI agents can't see live project state. They don't know if CI is flaky, if dependencies are drifting, if coverage is declining, or if endpoints are degrading. PulseLive gives agents the answer in one call — with trend direction, anomaly detection, and prioritised recommendations.
+If you're an AI agent trying to assess project health, you have two options today:
 
-- **Agent-first**: Built-in MCP server with 9 tools, every response includes `actionable`, `severity`, `confidence`, `context`
-- **Telemetry**: Trend analysis (improving/stable/degrading), anomaly detection (2σ), velocity tracking
-- **Webhook alerts**: HMAC-signed push notifications on anomalies, degrading trends, flaky CI
-- **8 check modules**: CI, deploy, health, git, issues, PRs, coverage, deps
-- **CI/CD integration**: Exit codes, JSON, JUnit XML output
-- **Security hardened**: SSRF protection, no shell injection, no token leaks
+1. **Raw API wrappers** — GitHub MCP Server, Datadog MCP. You make 5+ calls, parse different schemas, and piece together what's actually wrong. No prioritisation, no trends, no actionable output.
+2. **Enterprise platforms** — Datadog, New Relic, OneUptime. Comprehensive, but require paid accounts and don't speak agent-native.
+
+PulseLive fills the gap. One call gives you the full picture: what's broken, what's degrading, what to fix first — with severity, confidence, and context built into every response.
+
+**For developers**, it's a CLI that runs 8 health checks, tracks trends over time, and alerts you via webhooks when things degrade. **For AI agents**, it's an MCP server with 9 tools that return structured, prioritised, actionable data — no interpretation required.
+
+### What makes it different
+
+- **Agent-first responses**: Every MCP tool returns `actionable`, `severity`, `confidence`, `context` — not raw data you have to interpret
+- **`pulselive_recommend`**: A ranked action list. Rank 1 is what you should fix right now
+- **Trend analysis**: Not just "is it broken now?" but "is it getting worse?" with direction, delta, and velocity
+- **Anomaly detection**: Statistical (2σ from rolling mean), not threshold-based
+- **Webhook alerts**: HMAC-signed push on anomalies, degrading trends, flaky CI
+- **Security hardened**: SSRF protection (IPv4 + IPv6), no shell injection, no token leaks
 
 ## Installation
 
 ```bash
-npx pulselive
-# or
-npm install -g pulselive
+npx @siongyuencheah/pulselive check
+# or install globally
+npm install -g @siongyuencheah/pulselive
+pulselive check
 ```
 
 ## Quick Start
 
-### 1. Initialize configuration
+### 1. Initialise configuration
 
 ```bash
 cd your-project
 pulselive init
 ```
 
-This creates a `.pulselive.yml` file with auto-detected defaults.
+Creates `.pulselive.yml` with auto-detected GitHub repo, language, and health endpoints.
 
 ### 2. Run a check
 
@@ -38,34 +48,57 @@ This creates a `.pulselive.yml` file with auto-detected defaults.
 pulselive check
 ```
 
-### 3. Review trends
+```
+🔄 CI/CD:
+  ✅ Latest run: CI (success)
+  ⚠️  2 need review
+
+📋 Git:
+  ✅ main branch, 0 uncommitted, up to date
+
+📖 Dependencies:
+  ⚠️  5 outdated, 2 vulnerable
+
+📊 Summary: 0 critical, 3 warnings
+```
+
+### 3. Track trends over time
+
+Every `pulselive check` saves a history entry. After a few runs:
 
 ```bash
 pulselive trends
 pulselive anomalies
 ```
 
+```
+📈 deps: degrading ⚠️ ANOMALY
+   Delta: +3.00
+   Velocity: 1.50/run
+   Mean: 4.33, σ: 1.53
+```
+
 ## MCP Server (Agent Interface)
 
-The primary interface for AI agents. Start the MCP server:
+The primary interface for AI agents. Start the server:
 
 ```bash
 pulselive mcp
 ```
 
-### Available Tools
+### 9 Tools
 
-| Tool | Purpose |
-|------|---------|
-| `pulselive_check` | Full health check (all modules) |
-| `pulselive_ci` | CI status + flakiness score |
-| `pulselive_health` | Endpoint health + latency |
-| `pulselive_deps` | Dependency audit |
-| `pulselive_summary` | Summary + top anomalies + overall trend |
-| `pulselive_trends` | Trend analysis (direction, delta, velocity) |
+| Tool | What It Returns |
+|------|----------------|
+| `pulselive_check` | Full health check (all modules) + optional trends |
+| `pulselive_ci` | CI status + flakiness score + trend |
+| `pulselive_health` | Endpoint health + latency + baseline comparison |
+| `pulselive_deps` | Dependency audit (vulnerable + outdated) |
+| `pulselive_summary` | Summary + top anomalies + overall trend direction |
+| `pulselive_trends` | Trend analysis: direction, delta, velocity per check |
 | `pulselive_anomalies` | Anomaly detection (2σ from rolling mean) |
-| `pulselive_metrics` | Full telemetry: history + trends + current |
-| `pulselive_recommend` | Prioritised action items ranked by impact |
+| `pulselive_metrics` | Full telemetry: history + trends + current values |
+| `pulselive_recommend` | **Prioritised action items** ranked by severity + confidence |
 
 ### Query Parameters
 
@@ -77,9 +110,9 @@ GET /?tool=pulselive_recommend
 GET /?dir=/path/to/project
 ```
 
-### Response Format (Agent-Optimised)
+### Response Format
 
-Every MCP response includes structured, actionable data:
+Every response includes structured, actionable data:
 
 ```json
 {
@@ -94,9 +127,9 @@ Every MCP response includes structured, actionable data:
 }
 ```
 
-### Recommendations
+### Recommendations — The Killer Feature
 
-`pulselive_recommend` returns a ranked action list:
+`pulselive_recommend` ranks what matters most, so agents don't waste time on low-impact items:
 
 ```json
 {
@@ -129,31 +162,27 @@ Every MCP response includes structured, actionable data:
 # Basic check
 pulselive check
 
-# JSON output
+# JSON output (for scripts and agents)
 pulselive check --json
 
 # Include trends in JSON
 pulselive check --json --include-trends
 
-# JUnit XML (for CI/CD)
+# JUnit XML (for CI/CD pipelines)
 pulselive check --junit
 
-# CI mode (exit 1 on critical)
+# Exit 1 on critical (CI gating)
 pulselive check --fail-on-error
 
-# Verbose output
+# Verbose output with timing
 pulselive check --verbose
 
 # Compare with previous run
 pulselive check --compare
 
-# Single check type
-pulselive check --type ci
-
 # Trend analysis
 pulselive trends
-pulselive trends --type deps
-pulselive trends --window 14
+pulselive trends --type deps --window 14
 pulselive trends --json
 
 # Anomaly detection
@@ -161,11 +190,9 @@ pulselive anomalies
 pulselive anomalies --json
 
 # Run history
-pulselive history
-pulselive history --limit 20
-pulselive history --json
+pulselive history --limit 20 --json
 
-# Initialize config
+# Initialise config
 pulselive init
 
 # Start MCP server
@@ -209,18 +236,18 @@ webhooks:
     secret: optional-hmac-secret
 ```
 
-## Check Modules
+## 8 Check Modules
 
 | Check | What It Does | Key Metrics |
 |-------|-------------|------------|
-| **CI** | GitHub Actions last 10 runs | flakinessScore, trend |
-| **Health** | HTTP endpoint checks + SSRF protection | latency, baseline ratio |
-| **Deps** | npm audit + outdated | vulnerable, outdated |
-| **Coverage** | Local (Istanbul/lcov/Clover) + remote (Codecov/Coveralls) | percentage |
-| **Issues** | GitHub Issues | open, closed |
-| **PRs** | GitHub Pull Requests | open, needsReview, conflicts |
-| **Git** | Branch, uncommitted, divergence | uncommitted, divergence |
-| **Deploy** | GitHub Deployments | status |
+| **CI** | GitHub Actions last 10 runs | flakinessScore, trend (improving/stable/degrading) |
+| **Health** | HTTP endpoint checks + baseline comparison | latency, baseline ratio |
+| **Deps** | npm audit + outdated count | vulnerable, outdated, total |
+| **Coverage** | Local (Istanbul/lcov/Clover) + remote (Codecov/Coveralls) | percentage vs threshold |
+| **Issues** | GitHub Issues | open, closed, critical, bugs |
+| **PRs** | GitHub Pull Requests | open, needsReview, conflicts, drafts |
+| **Git** | Branch, uncommitted, divergence from default | uncommitted files, ahead/behind |
+| **Deploy** | GitHub Deployments | status, environment |
 
 ## Webhook Events
 
@@ -229,23 +256,32 @@ webhooks:
 | `critical` | Any check with error status |
 | `anomaly` | Metric exceeds 2σ from rolling mean |
 | `degrading` | Trend direction is degrading |
-| `flaky` | CI flakiness > 30% |
+| `flaky` | CI flakiness score > 30% |
 
 Webhooks are HMAC-SHA256 signed when a secret is configured. Payload includes `event`, `checkType`, `severity`, `actionable`, `context`.
 
 ## Security
 
-- No `execSync` — all child_process uses `execFileSync`
-- SSRF protection — blocks private IPs, loopback, cloud metadata
-- DNS validation — resolves hostnames, blocks banned IPs
-- No token leaks — errors use generic messages, `init` never writes tokens
-- YAML hardening — `schema: 'core'` prevents dangerous types
-- Path traversal blocking — MCP `dir` param validated
-- 64KB config limit, max 20 endpoints, 1-30s timeouts
+- **No shell injection** — all `child_process` calls use `execFileSync` (no shell spawned)
+- **SSRF protection** — blocks private IPs, loopback, cloud metadata (IPv4 + IPv6), DNS resolution validation, no redirect following
+- **No token leaks** — `init` never writes tokens to config, error messages are generic, tokens via env vars only
+- **YAML hardening** — `schema: 'core'` prevents dangerous types, 64KB size limit, repo regex validation
+- **Path traversal blocking** — MCP `dir` param validated against `..` and null bytes
+- **DoS protection** — max 20 endpoints, 1–30s timeouts, 64KB config limit
 
-## Architecture
+## Comparison
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for full data flow, types, and conventions.
+| Feature | PulseLive | GitHub MCP Server | Datadog MCP |
+|---------|-----------|-------------------|-------------|
+| Single-call health check | ✅ | ❌ (5+ calls) | ❌ (paid) |
+| Agent-first responses | ✅ | ❌ (raw data) | ❌ (dashboards) |
+| Prioritised recommendations | ✅ | ❌ | ❌ |
+| Trend analysis | ✅ | ❌ | ✅ |
+| Anomaly detection | ✅ | ❌ | ✅ |
+| Webhook alerts | ✅ | ❌ | ✅ |
+| SSRF protection | ✅ | — | — |
+| No account required | ✅ | ✅ | ❌ |
+| Open source | ✅ (MIT) | ✅ | ❌ |
 
 ## License
 
