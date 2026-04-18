@@ -40,9 +40,11 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries: number = 2): Promi
 
 export class Scanner {
   private config: PulseliveConfig;
+  private workingDir: string;
 
-  constructor(config: PulseliveConfig) {
+  constructor(config: PulseliveConfig, workingDir: string = process.cwd()) {
     this.config = config;
+    this.workingDir = workingDir;
   }
 
   async runAllChecks(): Promise<CheckResult[]> {
@@ -52,7 +54,7 @@ export class Scanner {
       { type: 'ci', enabled: this.config.checks?.ci !== false, run: () => withRetry(() => new CICheck(this.config).run()) },
       { type: 'deploy', enabled: this.config.checks?.deploy !== false, run: () => withRetry(() => new DeployCheck(this.config).run()) },
       { type: 'health', enabled: this.config.checks?.health !== false, run: () => new HealthCheck(this.config).run() },
-      { type: 'git', enabled: this.config.checks?.git !== false, run: () => new GitCheck(this.config).run() },
+      { type: 'git', enabled: this.config.checks?.git !== false, run: () => withRetry(() => new GitCheck(this.config, this.workingDir).run()) },
       { type: 'issues', enabled: this.config.checks?.issues !== false, run: () => withRetry(() => new IssuesCheck(this.config).run()) },
       { type: 'prs', enabled: this.config.checks?.prs !== false, run: () => withRetry(() => new PRsCheck(this.config).run()) },
       { type: 'coverage', enabled: this.config.checks?.coverage?.enabled !== false, run: () => new CoverageCheck(this.config).run() },
@@ -120,7 +122,7 @@ export class Scanner {
         result = await new HealthCheck(this.config).run();
         break;
       case 'git':
-        result = await new GitCheck(this.config).run();
+        result = await new GitCheck(this.config, this.workingDir).run();
         break;
       case 'issues':
         result = await retryableCheck(() => new IssuesCheck(this.config).run());
@@ -151,7 +153,7 @@ export class Scanner {
       { type: 'ci', enabled: this.config.checks?.ci !== false, run: () => withRetry(() => new CICheck(this.config).run()) },
       { type: 'deploy', enabled: this.config.checks?.deploy !== false, run: () => withRetry(() => new DeployCheck(this.config).run()) },
       { type: 'health', enabled: this.config.checks?.health !== false, run: () => new HealthCheck(this.config).run() },
-      { type: 'git', enabled: this.config.checks?.git !== false, run: () => new GitCheck(this.config).run() },
+      { type: 'git', enabled: this.config.checks?.git !== false, run: () => new GitCheck(this.config, this.workingDir).run() },
       { type: 'issues', enabled: this.config.checks?.issues !== false, run: () => withRetry(() => new IssuesCheck(this.config).run()) },
       { type: 'prs', enabled: this.config.checks?.prs !== false, run: () => withRetry(() => new PRsCheck(this.config).run()) },
     ];

@@ -96,60 +96,12 @@ export class MCPServer {
       const toolStartTime = Date.now();
 
       try {
-        // Parse request parameters from either query string (GET) or JSON body (POST)
-        let tool: string | null = null;
-        let dir: string | undefined = undefined;
-        let includeTrends: boolean = false;
-        let checkType: string | undefined = undefined;
-        let window: number = 7;
-
-        if (req.method === 'POST') {
-          // Parse JSON body for POST requests
-          const contentType = req.headers['content-type'] || '';
-          if (contentType.includes('application/json')) {
-            const bodyChunks: Buffer[] = [];
-            for await (const chunk of req) {
-              bodyChunks.push(chunk);
-            }
-            const body = Buffer.concat(bodyChunks).toString('utf8');
-            try {
-              const jsonBody = JSON.parse(body);
-              tool = jsonBody.tool;
-              dir = jsonBody.dir;
-              includeTrends = jsonBody.include_trends === true;
-              checkType = jsonBody.check_type;
-              window = parseInt(jsonBody.window) || 7;
-            } catch (parseError) {
-              res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ error: 'Invalid JSON body' }));
-              this.logMCPUsage('unknown', toolStartTime, 'error');
-              return;
-            }
-          } else {
-            res.writeHead(415, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: 'Unsupported Media Type - expected application/json' }));
-            this.logMCPUsage('unknown', toolStartTime, 'error');
-            return;
-          }
-        } else if (req.method === 'GET') {
-          // Parse query parameters for GET requests (backward compatibility)
-          const url = new URL(req.url || '/', `http://${req.headers.host}`);
-          tool = url.searchParams.get('tool');
-          dir = url.searchParams.get('dir') || undefined;
-          includeTrends = url.searchParams.get('include_trends') === 'true';
-          checkType = url.searchParams.get('check_type') || undefined;
-          window = parseInt(url.searchParams.get('window') || '7') || 7;
-        } else {
-          res.writeHead(405, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Method Not Allowed - use GET or POST' }));
-          this.logMCPUsage('unknown', toolStartTime, 'error');
-          return;
-        }
+        const url = new URL(req.url || '/', `http://${req.headers.host}`);
+        const tool = url.searchParams.get('tool');
 
         if (!tool) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Missing required parameter: tool' }));
-          this.logMCPUsage('unknown', toolStartTime, 'error');
           return;
         }
 
@@ -159,6 +111,11 @@ export class MCPServer {
           this.logMCPUsage(tool, toolStartTime, 'error');
           return;
         }
+
+        const dir = url.searchParams.get('dir') || undefined;
+        const includeTrends = url.searchParams.get('include_trends') === 'true';
+        const checkType = url.searchParams.get('check_type') || undefined;
+        const window = parseInt(url.searchParams.get('window') || '7') || 7;
 
         // Validate required parameters for each tool
         const requiredParams = this.getRequiredParamsForTool(tool);

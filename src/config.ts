@@ -234,14 +234,15 @@ export class ConfigLoader {
     return this.config;
   }
 
-  autoDetect(): PulseliveConfig {
+  autoDetect(baseDir?: string): PulseliveConfig {
     const detectedConfig: PulseliveConfig = JSON.parse(JSON.stringify(this.config || {}));
+    const workingDir = baseDir || process.cwd();
 
     // Auto-detect GitHub repo from git remote
     if (!detectedConfig.github?.repo) {
       try {
         // Use execFileSync to prevent shell injection via repo URL
-        const gitRemote = execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+        const gitRemote = execFileSync('git', ['remote', 'get-url', 'origin'], { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], cwd: workingDir }).trim();
         
         // Handle both SSH and HTTPS URLs
         const sshMatch = gitRemote.match(/git@github\.com:([^\/]+)\/([^\/]+?)(?:\.git)?$/);
@@ -260,9 +261,9 @@ export class ConfigLoader {
     }
 
     // Auto-detect language from files
-    const packageJsonPath = path.join(process.cwd(), 'package.json');
-    const requirementsPath = path.join(process.cwd(), 'requirements.txt');
-    const goModPath = path.join(process.cwd(), 'go.mod');
+    const packageJsonPath = path.join(workingDir, 'package.json');
+    const requirementsPath = path.join(workingDir, 'requirements.txt');
+    const goModPath = path.join(workingDir, 'go.mod');
     if (!detectedConfig.checks) {
       detectedConfig.checks = {};
     }
@@ -277,7 +278,7 @@ export class ConfigLoader {
 
     // Enable git check if .git directory exists (only if not explicitly set)
     if (detectedConfig.checks.git === undefined) {
-      if (fs.existsSync(path.join(process.cwd(), '.git'))) {
+      if (fs.existsSync(path.join(workingDir, '.git'))) {
         detectedConfig.checks.git = true;
       }
     }

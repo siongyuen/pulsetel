@@ -24,6 +24,7 @@ program
 program
   .command('check')
   .description('Run all checks and show report')
+  .argument('[dir]', 'Directory to check (defaults to current directory)')
   .option('--json', 'Output results as JSON')
   .option('--junit', 'Output results as JUnit XML')
   .option('--verbose', 'Show detailed output including execution times')
@@ -32,11 +33,12 @@ program
   .option('--compare', 'Compare current run with previous run')
   .option('--include-trends', 'Include trend analysis in JSON output')
   .option('--quick', 'Quick triage - skip deps and coverage for ~2s response')
-  .action(async (options) => {
+  .action(async (dir, options) => {
     const startTime = Date.now();
-    const configLoader = new ConfigLoader();
-    const config = configLoader.autoDetect();
-    const scanner = new Scanner(config);
+    const workingDir = dir || process.cwd();
+    const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
+    const config = configLoader.autoDetect(workingDir);
+    const scanner = new Scanner(config, workingDir);
     const reporter = new Reporter(!options.json);
 
     const results: CheckResult[] = options.quick ? await scanner.runQuickChecks() : await scanner.runAllChecks();
@@ -99,12 +101,14 @@ program
 program
   .command('quick')
   .description('Quick triage - skip deps/coverage for ~2s response')
+  .argument('[dir]', 'Directory to check (defaults to current directory)')
   .option('--json', 'Output results as JSON')
-  .action(async (options) => {
+  .action(async (dir, options) => {
     const startTime = Date.now();
-    const configLoader = new ConfigLoader();
-    const config = configLoader.autoDetect();
-    const scanner = new Scanner(config);
+    const workingDir = dir || process.cwd();
+    const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
+    const config = configLoader.autoDetect(workingDir);
+    const scanner = new Scanner(config, workingDir);
     const reporter = new Reporter(!options.json);
 
     const results: CheckResult[] = await scanner.runQuickChecks();
@@ -349,10 +353,11 @@ program
 program
   .command('watch')
   .description('Continuous monitoring that re-runs checks on file changes')
+  .argument('[dir]', 'Directory to watch (defaults to current directory)')
   .option('--quick', 'Quick triage - skip deps and coverage for ~2s response')
   .option('--json', 'Output results as JSON')
   .option('--verbose', 'Show detailed output including execution times')
-  .action(async (options) => {
+  .action(async (dir, options) => {
     const fs = require('fs');
     const path = require('path');
 
@@ -360,9 +365,10 @@ program
     console.log('    Press Ctrl+C to exit\n');
 
     // Initial run
-    const configLoader = new ConfigLoader();
-    const config = configLoader.autoDetect();
-    const scanner = new Scanner(config);
+    const workingDir = dir || process.cwd();
+    const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
+    const config = configLoader.autoDetect(workingDir);
+    const scanner = new Scanner(config, workingDir);
     const reporter = new Reporter(!options.json);
 
     const runChecks = async () => {
@@ -391,7 +397,8 @@ program
     await runChecks();
 
     // Set up file watcher
-    const watcher = fs.watch(process.cwd(), { recursive: true }, async (eventType: string, filename: string | Buffer) => {
+    const watchDir = dir || process.cwd();
+    const watcher = fs.watch(watchDir, { recursive: true }, async (eventType: string, filename: string | Buffer) => {
       if (!filename) return;
 
       const filenameStr = typeof filename === 'string' ? filename : filename.toString();
@@ -427,11 +434,13 @@ program
 program
   .command('badge')
   .description('Generate a README shield/badge')
+  .argument('[dir]', 'Directory to check (defaults to current directory)')
   .option('--json', 'Output raw badge data as JSON')
-  .action(async (options) => {
-    const configLoader = new ConfigLoader();
-    const config = configLoader.autoDetect();
-    const scanner = new Scanner(config);
+  .action(async (dir, options) => {
+    const workingDir = dir || process.cwd();
+    const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
+    const config = configLoader.autoDetect(workingDir);
+    const scanner = new Scanner(config, workingDir);
 
     // Run checks to determine status
     const results: CheckResult[] = await scanner.runAllChecks();
@@ -469,11 +478,13 @@ program
 program
   .command('report')
   .description('Export check results as a formatted report')
+  .argument('[dir]', 'Directory to check (defaults to current directory)')
   .option('--format <format>', 'Output format (markdown or text)', 'markdown')
-  .action(async (options) => {
-    const configLoader = new ConfigLoader();
-    const config = configLoader.autoDetect();
-    const scanner = new Scanner(config);
+  .action(async (dir, options) => {
+    const workingDir = dir || process.cwd();
+    const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
+    const config = configLoader.autoDetect(workingDir);
+    const scanner = new Scanner(config, workingDir);
     const reporter = new Reporter(false);
 
     // Run checks
