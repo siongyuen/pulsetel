@@ -21,16 +21,54 @@ export class GitCheck {
       const uncommitted = execSync('git status --porcelain', { encoding: 'utf8' }).trim();
       const uncommittedCount = uncommitted.split('\n').filter(line => line.trim() !== '').length;
 
-      // Get divergence from main
+      // Get divergence from default branch (main, master, or trunk)
       let divergence = 'unknown';
       try {
-        const mainCommit = execSync('git rev-parse main', { encoding: 'utf8' }).trim();
-        const currentCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
-        const diff = execSync(`git rev-list --left-right --count ${mainCommit}...${currentCommit}`, {
-          encoding: 'utf8'
-        }).trim();
-        const [behind, ahead] = diff.split('\t').map(Number);
-        divergence = ahead > 0 ? `ahead by ${ahead}` : behind > 0 ? `behind by ${behind}` : 'up to date';
+        // Resolve the default branch: prefer remote HEAD, fall back to local branches
+        let defaultBranch: string | undefined;
+        try {
+          const remoteHead = execSync('git rev-parse --abbrev-ref HEAD@{upstream}', { encoding: 'utf8' }).trim();
+          // e.g. 'origin/main' → extract 'main'
+          defaultBranch = remoteHead.split('/').slice(1).join('/');
+        } catch {
+          // No upstream — try common defaults in order
+          for (const candidate of ['main', 'master', 'trunk', 'develop']) {
+            try {
+              execSync(`git rev-parse --verify ${candidate}`, { encoding: 'utf8', stdio: 'pipe' });
+              defaultBranch = candidate;
+              break;
+            } catch {
+              // branch doesn't exist
+            }
+          }
+        }
+
+        if (defaultBranch) {
+          // If on the default branch, compare against upstream tracking ref
+          // to detect unpushed commits. Otherwise, compare against the default branch.
+          let compareRef: string;
+          if (defaultBranch === branch) {
+            try {
+              // Try to use the upstream tracking branch for comparison
+              const upstream = execSync('git rev-parse --abbrev-ref HEAD@{upstream}', { encoding: 'utf8', stdio: 'pipe' }).trim();
+              compareRef = upstream; // e.g. 'origin/main'
+            } catch {
+              // No upstream set — already on default branch with no remote, can't determine divergence
+              divergence = 'up to date';
+              throw new Error('no upstream'); // skip to outer catch
+            }
+          } else {
+            compareRef = defaultBranch;
+          }
+
+          const compareCommit = execSync(`git rev-parse ${compareRef}`, { encoding: 'utf8' }).trim();
+          const currentCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+          const diff = execSync(`git rev-list --left-right --count ${compareCommit}...${currentCommit}`, {
+            encoding: 'utf8'
+          }).trim();
+          const [behind, ahead] = diff.split('\t').map(Number);
+          divergence = ahead > 0 ? `ahead by ${ahead}` : behind > 0 ? `behind by ${behind}` : 'up to date';
+        }
       } catch (error) {
         // Couldn't determine divergence
       }

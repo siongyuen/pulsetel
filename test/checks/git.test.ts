@@ -28,14 +28,20 @@ describe('GitCheck', () => {
 
   it('should return git status information', async () => {
     (execSync as any).mockImplementation((command: string) => {
-      if (command.includes('rev-parse --abbrev-ref HEAD')) {
+      if (command.includes('rev-parse --abbrev-ref HEAD@{upstream}')) {
+        return 'origin/main';
+      } else if (command.includes('rev-parse --abbrev-ref HEAD')) {
         return 'main';
       } else if (command.includes('log --oneline -5')) {
         return 'abc1234 Fix bug\ndef4567 Add feature';
       } else if (command.includes('status --porcelain')) {
         return 'M  file1.txt\nM  file2.txt';
+      } else if (command.includes('rev-parse --verify')) {
+        return 'found';
       } else if (command.includes('rev-parse main')) {
         return 'main-commit-hash';
+      } else if (command.includes('rev-parse origin/main')) {
+        return 'origin-main-hash';
       } else if (command.includes('rev-parse HEAD')) {
         return 'current-commit-hash';
       } else if (command.includes('rev-list --left-right --count')) {
@@ -55,7 +61,11 @@ describe('GitCheck', () => {
 
   it('should handle divergence detection failure', async () => {
     (execSync as any).mockImplementation((command: string) => {
-      if (command.includes('rev-parse --abbrev-ref HEAD')) {
+      if (command.includes('rev-parse --abbrev-ref HEAD@{upstream}')) {
+        throw new Error('no upstream');
+      } else if (command.includes('rev-parse --verify')) {
+        throw new Error('branch not found');
+      } else if (command.includes('rev-parse --abbrev-ref HEAD')) {
         return 'feature-branch';
       } else if (command.includes('log --oneline -5')) {
         return 'abc1234 Initial commit';
