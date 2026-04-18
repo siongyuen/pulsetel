@@ -6,6 +6,7 @@ import { AddressInfo } from 'net';
 import { resolve, normalize } from 'path';
 import { readFileSync, existsSync, readdirSync, writeFileSync, mkdirSync } from 'fs';
 import { VERSION } from './version';
+import { PulseliveConfig } from './config';
 
 const VALID_TOOLS = [
   'pulselive_check',
@@ -17,7 +18,8 @@ const VALID_TOOLS = [
   'pulselive_trends',
   'pulselive_anomalies',
   'pulselive_metrics',
-  'pulselive_recommend'
+  'pulselive_recommend',
+  'pulselive_status'
 ];
 
 // MCP usage telemetry
@@ -75,7 +77,8 @@ export class MCPServer {
       'pulselive_recommend': ['dir'],
       'pulselive_trends': [],
       'pulselive_anomalies': [],
-      'pulselive_metrics': []
+      'pulselive_metrics': [],
+      'pulselive_status': []
     };
     
     return toolParams[tool] || [];
@@ -226,6 +229,7 @@ export class MCPServer {
     includeTrends?: boolean;
     checkType?: string;
     window?: number;
+    repos?: string;
   }): Promise<any> {
     const scanner = this.getScanner(dir);
     const history = this.loadHistory();
@@ -233,8 +237,14 @@ export class MCPServer {
 
     switch (tool) {
       case 'pulselive_check':
+        if (params?.repos) {
+          return this.pulseliveMultiRepoCheck(params.repos, false, params.includeTrends);
+        }
         return this.pulseliveCheck(scanner, history, trendAnalyzer, params?.includeTrends);
       case 'pulselive_quick':
+        if (params?.repos) {
+          return this.pulseliveMultiRepoCheck(params.repos, true, false);
+        }
         return this.pulseliveQuick(scanner, history, trendAnalyzer);
       case 'pulselive_ci':
         return this.pulseliveSingle(scanner, 'ci', history, trendAnalyzer);
@@ -250,8 +260,8 @@ export class MCPServer {
         return this.pulseliveAnomalies(history, trendAnalyzer);
       case 'pulselive_metrics':
         return this.pulseliveMetrics(history, trendAnalyzer, params?.checkType);
-      case 'pulselive_recommend':
-        return this.pulseliveRecommend(scanner, history, trendAnalyzer);
+      case 'pulselive_status':
+        return this.pulseliveStatus(dir);
       default:
         throw new Error('Unknown tool');
     }
@@ -475,6 +485,185 @@ export class MCPServer {
     return { available: true, metrics };
   }
 
+  private async pulseliveStatus(
+    historyDir: string = '.pulselive-history'
+  ): Promise<any> {
+    const history = this.loadHistory(historyDir);
+    
+    if (history.length === 0) {
+      return {
+        schema_version: "1.0.0",
+        schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+        version: VERSION,
+        timestamp: new Date().toISOString(),
+        healthy: null,
+        message: "No history available. Run pulselive check first to establish baseline."
+      };
+    }
+    
+    // Sort by timestamp (newest first)
+    history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const latestRun = history[0];
+    
+    const startTime = Date.now();
+    const critical = latestRun.results.filter(r => r.status === 'error').length;
+    const warnings = latestRun.results.filter(r => r.status === 'warning').length;
+    const healthy = critical === 0;
+    const totalDuration = Date.now() - startTime;
+    
+    return {
+      schema_version: "1.0.0",
+      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      version: VERSION,
+      timestamp: new Date().toISOString(),
+      healthy: healthy,
+      critical: critical,
+      warnings: warnings,
+      last_check: latestRun.timestamp,
+    };
+  }
+
+  // ── pulselive_multi_repo: multi-repository checks ───
+
+  private async pulseliveMultiRepoCheck(
+    reposString: string,
+    quick: boolean,
+    includeTrends?: boolean
+  ): Promise<any> {
+    const repoList = reposString.split(',').map(r => r.trim()).filter(r => r.length > 0);
+    
+    if (repoList.length === 0) {
+      throw new Error('No valid repositories specified');
+    }
+    
+    const startTime = Date.now();
+    const results: Array<{
+      repo: string;
+      results: CheckResult[];
+      error?: string;
+    }> = [];
+    
+    // Process each repository
+    for (const repo of repoList) {
+      try {
+        // Create a temporary config for this repo
+        const tempConfig: PulseliveConfig = {
+          github: {
+            repo: repo,
+            token: process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+          },
+          checks: {
+            ci: true,
+            deps: !quick,
+            git: true,
+            health: true,
+            issues: true,
+            prs: true,
+            deploy: true,
+            coverage: !quick ? { enabled: true, threshold: 80 } : { enabled: false }
+          }
+        };
+        
+        const scanner = new Scanner(tempConfig);
+        const checkResults: CheckResult[] = quick 
+          ? await scanner.runQuickChecks()
+          : await scanner.runAllChecks();
+        
+        results.push({
+          repo: repo,
+          results: checkResults
+        });
+        
+      } catch (error: any) {
+        results.push({
+          repo: repo,
+          results: [],
+          error: error.message || 'Unknown error'
+        });
+      }
+    }
+    
+    const totalDuration = Date.now() - startTime;
+    const overallSummary = this.computeMultiRepoSummary(results);
+    
+    const response: any = {
+      schema_version: "1.0.0",
+      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      version: VERSION,
+      timestamp: new Date().toISOString(),
+      duration: totalDuration,
+      quick: quick,
+      repos: results.map(r => ({
+        repo: r.repo,
+        results: r.results.map(check => this.enrichResult(check)),
+        error: r.error
+      })),
+      summary: overallSummary
+    };
+    
+    if (includeTrends && results.length > 0 && results[0].results.length > 0) {
+      // Include trend analysis if requested and available
+      const history = this.loadHistory();
+      if (history.length > 0) {
+        const trendAnalyzer = new TrendAnalyzer();
+        const checkTypes = new Set<string>();
+        results.forEach(repoResult => {
+          repoResult.results.forEach(r => checkTypes.add(r.type));
+        });
+        const trends: any = {};
+        for (const ct of checkTypes) {
+          trends[ct] = trendAnalyzer.analyze(ct, history);
+        }
+        response.trends = trends;
+        response.anomalies = trendAnalyzer.detectAnomalies(history);
+      }
+    }
+    
+    return response;
+  }
+
+  private computeMultiRepoSummary(results: Array<{ repo: string; results: CheckResult[]; error?: string }>): any {
+    let reposWithErrors = 0;
+    let reposWithWarnings = 0;
+    let totalCritical = 0;
+    let totalWarnings = 0;
+    let totalHealthy = 0;
+    
+    for (const result of results) {
+      if (result.error) {
+        reposWithErrors++;
+        continue;
+      }
+      
+      const critical = result.results.filter(r => r.status === 'error').length;
+      const warnings = result.results.filter(r => r.status === 'warning').length;
+      const healthy = result.results.filter(r => r.status === 'success').length;
+      
+      totalCritical += critical;
+      totalWarnings += warnings;
+      totalHealthy += healthy;
+      
+      if (critical > 0) {
+        reposWithErrors++;
+      } else if (warnings > 0) {
+        reposWithWarnings++;
+      }
+    }
+    
+    const overallStatus = reposWithErrors > 0 ? 'critical' : reposWithWarnings > 0 ? 'degraded' : 'healthy';
+    
+    return {
+      reposWithErrors,
+      reposWithWarnings,
+      totalCritical,
+      totalWarnings,
+      totalHealthy,
+      overallStatus
+    };
+  }
+
+  // ── pulselive_recommend: prioritised actionable recommendations ───
+
   private async pulseliveRecommend(
     scanner: Scanner,
     history: HistoryEntry[],
@@ -492,21 +681,6 @@ export class MCPServer {
     }> = [];
 
     let rank = 1;
-
-    // Critical errors first
-    for (const r of results) {
-      if (r.status === 'error') {
-        recommendations.push({
-          rank: rank++,
-          checkType: r.type,
-          severity: 'critical',
-          confidence: 'high',
-          title: `${r.type} check failed`,
-          actionable: this.errorActionable(r),
-          context: r.message
-        });
-      }
-    }
 
     // Anomalies from history
     if (history.length > 0) {
@@ -801,12 +975,11 @@ export class MCPServer {
     }
   }
 
-  // ── History loader (same as CLI) ──
-
-  private loadHistory(): HistoryEntry[] {
+  private loadHistory(historyDir: string = '.pulselive-history'): HistoryEntry[] {
     try {
-      const historyDir = '.pulselive-history';
-      if (!existsSync(historyDir)) return [];
+      if (!existsSync(historyDir)) {
+        return [];
+      }
 
       const files = readdirSync(historyDir);
       const history: HistoryEntry[] = [];

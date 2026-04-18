@@ -51,6 +51,10 @@ const TOOLS = [
           type: 'string',
           description: 'Absolute path to the project directory to check. Defaults to current working directory.'
         },
+        repos: {
+          type: 'string',
+          description: 'Check multiple repositories (format: owner/repo1,owner/repo2). When specified, dir is ignored.'
+        },
         include_trends: {
           type: 'boolean',
           description: 'Include trend analysis in the response. Defaults to false.'
@@ -68,6 +72,10 @@ const TOOLS = [
         dir: {
           type: 'string',
           description: 'Absolute path to the project directory. Defaults to cwd.'
+        },
+        repos: {
+          type: 'string',
+          description: 'Check multiple repositories (format: owner/repo1,owner/repo2). When specified, dir is ignored.'
         }
       },
       estimated_duration_ms: 2000
@@ -179,8 +187,8 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_recommend',
-    description: 'Get prioritised, actionable recommendations ranked by severity and confidence. The highest-ranked item is what you should fix right now.',
+    name: 'pulselive_status',
+    description: 'Lightweight health ping — reads most recent check result from history (no API calls, no network). Returns immediately with healthy boolean, critical/warning counts, and last check timestamp. Sub-10ms response time.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -188,7 +196,8 @@ const TOOLS = [
           type: 'string',
           description: 'Absolute path to the project directory. Defaults to cwd.'
         }
-      }
+      },
+      estimated_duration_ms: 5
     }
   }
 ];
@@ -298,7 +307,8 @@ export class MCPStdioServer {
             {
               includeTrends: toolArgs.include_trends || false,
               checkType: toolArgs.check_type,
-              window: toolArgs.window || 7
+              window: toolArgs.window || 7,
+              repos: toolArgs.repos
             }
           );
 

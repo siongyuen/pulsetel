@@ -14,6 +14,7 @@ import path from 'path';
 import os from 'os';
 
 import { VERSION } from './version';
+import { PulseliveConfig } from './config';
 
 const program = new Command();
 
@@ -34,7 +35,15 @@ program
   .option('--compare', 'Compare current run with previous run')
   .option('--include-trends', 'Include trend analysis in JSON output')
   .option('--quick', 'Quick triage - skip deps and coverage for ~2s response')
+  .option('--repos <repos>', 'Check multiple repositories (format: owner/repo1,owner/repo2)')
   .action(async (dir, options) => {
+    if (options.repos) {
+      // Multi-repo mode
+      await handleMultiRepoCheck(options.repos, options);
+      return;
+    }
+    
+    // Single repo mode (existing logic)
     const startTime = Date.now();
     const workingDir = dir || process.cwd();
     const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
@@ -190,7 +199,15 @@ program
   .command('quick')
   .argument('[dir]', 'Directory to check (defaults to current directory)')
   .option('--json', 'Output results as JSON')
+  .option('--repos <repos>', 'Check multiple repositories (format: owner/repo1,owner/repo2)')
   .action(async (dir, options) => {
+    if (options.repos) {
+      // Multi-repo mode
+      await handleMultiRepoCheck(options.repos, { ...options, quick: true });
+      return;
+    }
+    
+    // Single repo mode (existing logic)
     const startTime = Date.now();
     const workingDir = dir || process.cwd();
     const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
@@ -619,6 +636,62 @@ program
   });
 
 program
+  .command('status')
+  .description('Lightweight health ping - reads most recent check result from history (no API calls)')
+  .argument('[dir]', 'Directory to check (defaults to current directory)')
+  .option('--json', 'Output results as JSON')
+  .action(async (dir, options) => {
+    const workingDir = dir || process.cwd();
+    const historyDir = workingDir + '/.pulselive-history';
+    
+    const history = loadHistory(historyDir);
+    
+    if (history.length === 0) {
+      if (options.json) {
+        console.log(JSON.stringify({
+          schema_version: "1.0.0",
+          schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+          version: VERSION,
+          timestamp: new Date().toISOString(),
+          healthy: null,
+          message: "No history available. Run 'pulselive check' first to establish baseline."
+        }, null, 2));
+      } else {
+        console.log('❌ No history available — run `pulselive check` first');
+      }
+      process.exit(0);
+    }
+    
+    // Sort by timestamp (newest first)
+    history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const latestRun = history[0];
+    
+    const startTime = Date.now();
+    const critical = latestRun.results.filter(r => r.status === 'error').length;
+    const warnings = latestRun.results.filter(r => r.status === 'warning').length;
+    const healthy = critical === 0;
+    const totalDuration = Date.now() - startTime;
+    
+    if (options.json) {
+      console.log(JSON.stringify({
+        schema_version: "1.0.0",
+        schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+        version: VERSION,
+        timestamp: new Date().toISOString(),
+        healthy: healthy,
+        critical: critical,
+        warnings: warnings,
+        last_check: latestRun.timestamp,
+        duration_ms: totalDuration
+      }, null, 2));
+    } else {
+      const statusIcon = healthy ? '✅' : '❌';
+      const lastChecked = formatTimeAgo(latestRun.timestamp);
+      console.log(`${statusIcon} ${healthy ? 'Healthy' : 'Unhealthy'} (${critical} critical, ${warnings} warnings) — last checked ${lastChecked}`);
+    }
+  });
+
+program
   .command('report')
   .description('Export check results as a formatted report')
   .argument('[dir]', 'Directory to check (defaults to current directory)')
@@ -953,10 +1026,8 @@ function extractMetricsFromResult(result: CheckResult): any {
   return metrics;
 }
 
-function loadHistory(): HistoryEntry[] {
+function loadHistory(historyDir: string = '.pulselive-history'): HistoryEntry[] {
   try {
-    const historyDir = '.pulselive-history';
-
     if (!existsSync(historyDir)) {
       return [];
     }
@@ -978,17 +1049,199 @@ function loadHistory(): HistoryEntry[] {
   }
 }
 
-function compareWithPrevious(currentResults: CheckResult[]): string {
-  try {
-    const history = loadHistory();
+function formatTimeAgo(timestamp: string): string {
+  const now = new Date();
+  const then = new Date(timestamp);
+  const diffMs = now.getTime() - then.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
 
-    if (history.length === 0) {
+  if (diffDays > 0) {
+    return `${diffDays}d ago`;
+  } else if (diffHours > 0) {
+    return `${diffHours}h ago`;
+  } else if (diffMin > 0) {
+    return `${diffMin}m ago`;
+  } else {
+    return `${diffSec}s ago`;
+  }
+}
+
+async function handleMultiRepoCheck(reposString: string, options: { json?: boolean; quick?: boolean; exitCode?: boolean }) {
+  const repoList = reposString.split(',').map(r => r.trim()).filter(r => r.length > 0);
+  
+  if (repoList.length === 0) {
+    console.error('❌ No valid repositories specified');
+    process.exit(1);
+  }
+  
+  const startTime = Date.now();
+  const results: Array<{
+    repo: string;
+    results: CheckResult[];
+    error?: string;
+  }> = [];
+  
+  // Process each repository
+  for (const repo of repoList) {
+    try {
+      // Create a temporary config for this repo
+      const tempConfig: PulseliveConfig = {
+        github: {
+          repo: repo,
+          token: process.env.GITHUB_TOKEN || process.env.GH_TOKEN
+        },
+        checks: {
+          ci: true,
+          deps: !options.quick,
+          git: true,
+          health: true,
+          issues: true,
+          prs: true,
+          deploy: true,
+          coverage: !options.quick ? { enabled: true, threshold: 80 } : { enabled: false }
+        }
+      };
+      
+      const scanner = new Scanner(tempConfig);
+      const checkResults: CheckResult[] = options.quick 
+        ? await scanner.runQuickChecks()
+        : await scanner.runAllChecks();
+      
+      results.push({
+        repo: repo,
+        results: checkResults
+      });
+      
+    } catch (error: any) {
+      results.push({
+        repo: repo,
+        results: [],
+        error: error.message || 'Unknown error'
+      });
+    }
+  }
+  
+  const totalDuration = Date.now() - startTime;
+  
+  if (options.json) {
+    const overallSummary = computeMultiRepoSummary(results);
+    
+    console.log(JSON.stringify({
+      schema_version: "1.0.0",
+      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      version: VERSION,
+      timestamp: new Date().toISOString(),
+      duration: totalDuration,
+      quick: !!options.quick,
+      repos: results.map(r => ({
+        repo: r.repo,
+        results: r.results.map(check => mapToSchemaResult(check)),
+        error: r.error
+      })),
+      summary: overallSummary
+    }, null, 2));
+  } else {
+    // Table output
+    console.log('MULTI-REPO HEALTH CHECK');
+    console.log('=======================\n');
+    
+    // Header
+    console.log('Repo'.padEnd(30) + 'Status'.padEnd(10) + 'Critical'.padEnd(10) + 'Warnings'.padEnd(10) + 'Healthy');
+    console.log('-'.repeat(70));
+    
+    // Row for each repo
+    for (const result of results) {
+      if (result.error) {
+        console.log(result.repo.padEnd(30) + '❌ ERROR'.padEnd(10) + '-'.padEnd(10) + '-'.padEnd(10) + '-');
+        console.log(`  Error: ${result.error}`);
+      } else {
+        const critical = result.results.filter(r => r.status === 'error').length;
+        const warnings = result.results.filter(r => r.status === 'warning').length;
+        const healthy = result.results.filter(r => r.status === 'success').length;
+        const statusIcon = critical > 0 ? '❌' : warnings > 0 ? '⚠️' : '✅';
+        
+        console.log(result.repo.padEnd(30) + statusIcon.padEnd(10) + critical.toString().padEnd(10) + warnings.toString().padEnd(10) + healthy.toString());
+      }
+    }
+    
+    // Summary
+    const overallSummary = computeMultiRepoSummary(results);
+    console.log('\nSUMMARY');
+    console.log('-------');
+    console.log(`Total repos: ${results.length}`);
+    console.log(`Repos with errors: ${overallSummary.reposWithErrors}`);
+    console.log(`Repos with warnings: ${overallSummary.reposWithWarnings}`);
+    console.log(`Overall status: ${overallSummary.overallStatus}`);
+    console.log(`\n⏱  Total: ${totalDuration}ms`);
+  }
+  
+  // Exit codes for multi-repo
+  if (options.exitCode) {
+    const overallSummary = computeMultiRepoSummary(results);
+    if (overallSummary.reposWithErrors > 0) {
+      process.exit(1); // Critical issues found
+    } else if (overallSummary.reposWithWarnings > 0) {
+      process.exit(2); // Warnings only
+    } else {
+      process.exit(0); // All checks healthy
+    }
+  }
+}
+
+function computeMultiRepoSummary(results: Array<{ repo: string; results: CheckResult[]; error?: string }>): any {
+  let reposWithErrors = 0;
+  let reposWithWarnings = 0;
+  let totalCritical = 0;
+  let totalWarnings = 0;
+  let totalHealthy = 0;
+  
+  for (const result of results) {
+    if (result.error) {
+      reposWithErrors++;
+      continue;
+    }
+    
+    const critical = result.results.filter(r => r.status === 'error').length;
+    const warnings = result.results.filter(r => r.status === 'warning').length;
+    const healthy = result.results.filter(r => r.status === 'success').length;
+    
+    totalCritical += critical;
+    totalWarnings += warnings;
+    totalHealthy += healthy;
+    
+    if (critical > 0) {
+      reposWithErrors++;
+    } else if (warnings > 0) {
+      reposWithWarnings++;
+    }
+  }
+  
+  const overallStatus = reposWithErrors > 0 ? 'critical' : reposWithWarnings > 0 ? 'degraded' : 'healthy';
+  
+  return {
+    reposWithErrors,
+    reposWithWarnings,
+    totalCritical,
+    totalWarnings,
+    totalHealthy,
+    overallStatus
+  };
+}
+
+function compareWithPrevious(currentResults: CheckResult[], history?: HistoryEntry[]): string {
+  try {
+    const historyToUse = history || loadHistory();
+
+    if (historyToUse.length === 0) {
       return 'No previous runs available for comparison';
     }
 
     // Sort newest first
-    history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    const previousRun = history[0];
+    historyToUse.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const previousRun = historyToUse[0];
 
     let comparison = 'COMPARISON WITH PREVIOUS RUN\n';
     comparison += '=============================\n\n';
