@@ -54,6 +54,14 @@ export class ConfigLoader {
   constructor(configPath: string = '.pulselive.yml') {
     this.configPath = configPath;
     this.config = this.loadConfig();
+    
+    // Validate the loaded configuration and print warnings to stderr
+    const validation = this.validateConfig();
+    if (!validation.valid && validation.warnings.length > 0) {
+      validation.warnings.forEach(warning => {
+        console.error(`[pulselive] Config warning: ${warning}`);
+      });
+    }
   }
 
   private loadConfig(): PulseliveConfig {
