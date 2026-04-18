@@ -5,7 +5,7 @@ import { createServer, Server } from 'http';
 import { AddressInfo } from 'net';
 import { resolve, normalize } from 'path';
 import { readFileSync, existsSync, readdirSync, writeFileSync, mkdirSync } from 'fs';
-import { VERSION } from './index';
+import { VERSION } from './version';
 
 const VALID_TOOLS = [
   'pulselive_check',
@@ -122,7 +122,7 @@ export class MCPServer {
     }
   }
 
-  private async handleToolRequest(tool: string, dir?: string, params?: {
+  async handleToolRequest(tool: string, dir?: string, params?: {
     includeTrends?: boolean;
     checkType?: string;
     window?: number;

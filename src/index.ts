@@ -5,13 +5,14 @@ import { ConfigLoader } from './config';
 import { Scanner, CheckResult } from './scanner';
 import { Reporter } from './reporter';
 import { MCPServer } from './mcp-server';
+import { MCPStdioServer } from './mcp-stdio';
 import { TrendAnalyzer, HistoryEntry } from './trends';
 import { writeFileSync, readFileSync, readdirSync, existsSync, mkdirSync } from 'fs';
 import yaml from 'yaml';
 import path from 'path';
 import os from 'os';
 
-const VERSION = '0.3.0';
+import { VERSION } from './version';
 
 const program = new Command();
 
@@ -265,11 +266,20 @@ program
 
 program
   .command('mcp')
-  .description('Start the MCP server for AI agents')
+  .description('Start the MCP HTTP server for AI agents')
   .action(() => {
     const configLoader = new ConfigLoader();
     const mcpServer = new MCPServer(configLoader);
     mcpServer.start();
+  });
+
+program
+  .command('mcp-stdio')
+  .description('Start the MCP stdio transport (for Claude Desktop, Cursor, etc.)')
+  .action(() => {
+    const configLoader = new ConfigLoader();
+    const stdioServer = new MCPStdioServer(configLoader);
+    stdioServer.start();
   });
 
 program.parse(process.argv);

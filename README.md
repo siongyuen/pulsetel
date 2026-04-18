@@ -80,11 +80,36 @@ pulselive anomalies
 
 ## MCP Server (Agent Interface)
 
-The primary interface for AI agents. Start the server:
+The primary interface for AI agents. Two transport modes:
+
+### stdio Transport (Claude Desktop, Cursor, Smithery)
+
+```bash
+pulselive mcp-stdio
+```
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "pulselive": {
+      "command": "npx",
+      "args": ["-y", "@siongyuencheah/pulselive", "mcp-stdio"]
+    }
+  }
+}
+```
+
+Or for Cursor — same config in `.cursor/mcp.json`.
+
+### HTTP Transport
 
 ```bash
 pulselive mcp
 ```
+
+Starts an HTTP server on port 3000.
 
 ### 9 Tools
 
@@ -100,7 +125,7 @@ pulselive mcp
 | `pulselive_metrics` | Full telemetry: history + trends + current values |
 | `pulselive_recommend` | **Prioritised action items** ranked by severity + confidence |
 
-### Query Parameters
+### HTTP Query Parameters
 
 ```
 GET /?tool=pulselive_check&include_trends=true
@@ -195,8 +220,11 @@ pulselive history --limit 20 --json
 # Initialise config
 pulselive init
 
-# Start MCP server
+# Start MCP server (HTTP)
 pulselive mcp
+
+# Start MCP stdio transport (Claude Desktop / Cursor)
+pulselive mcp-stdio
 ```
 
 ## Configuration
