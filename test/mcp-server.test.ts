@@ -5,7 +5,8 @@ import path from 'path';
 
 describe('MCPServer', () => {
   const projectRoot = process.cwd();
-  const sourcePath = path.join(projectRoot, 'src/mcp-server.ts');
+  const serverSourcePath = path.join(projectRoot, 'src/mcp-server.ts');
+  const helpersSourcePath = path.join(projectRoot, 'src/mcp-helpers.ts');
   const indexPath = path.join(projectRoot, 'src/index.ts');
 
   describe('validateDir logic', () => {
@@ -37,7 +38,7 @@ describe('MCPServer', () => {
 
   describe('VALID_TOOLS constant', () => {
     it('includes all 9 expected MCP tools', () => {
-      const source = fs.readFileSync(sourcePath, 'utf8');
+      const source = fs.readFileSync(helpersSourcePath, 'utf8');
       const expectedTools = [
         'pulselive_check', 'pulselive_ci', 'pulselive_health', 'pulselive_deps',
         'pulselive_summary', 'pulselive_trends', 'pulselive_anomalies',
@@ -68,7 +69,7 @@ describe('MCPServer', () => {
 
   describe('CORS configuration', () => {
     it('source code sets correct CORS headers', () => {
-      const source = fs.readFileSync(sourcePath, 'utf8');
+      const source = fs.readFileSync(serverSourcePath, 'utf8');
       expect(source).toContain('Access-Control-Allow-Origin');
       expect(source).toContain('Access-Control-Allow-Methods');
       expect(source).toContain('OPTIONS');
@@ -77,20 +78,20 @@ describe('MCPServer', () => {
 
   describe('missing tool parameter handling', () => {
     it('source code returns specific error message for missing tool parameter', () => {
-      const source = fs.readFileSync(sourcePath, 'utf8');
+      const source = fs.readFileSync(serverSourcePath, 'utf8');
       expect(source).toContain('Missing required parameter: tool');
     });
   });
 
   describe('tool parameter validation', () => {
     it('source code validates required parameters for each tool', () => {
-      const source = fs.readFileSync(sourcePath, 'utf8');
+      const source = fs.readFileSync(serverSourcePath, 'utf8');
       expect(source).toContain('getRequiredParamsForTool');
       expect(source).toContain("Missing required parameter 'dir' for tool");
     });
 
     it('defines required parameters for directory-based tools', () => {
-      const source = fs.readFileSync(sourcePath, 'utf8');
+      const source = fs.readFileSync(helpersSourcePath, 'utf8');
       const toolsWithDir = ['pulselive_check', 'pulselive_quick', 'pulselive_ci', 'pulselive_health', 'pulselive_deps', 'pulselive_summary', 'pulselive_recommend'];
       toolsWithDir.forEach(tool => {
         expect(source).toContain(`'${tool}': ['dir']`);
@@ -98,7 +99,7 @@ describe('MCPServer', () => {
     });
 
     it('defines no required parameters for trend-based tools', () => {
-      const source = fs.readFileSync(sourcePath, 'utf8');
+      const source = fs.readFileSync(helpersSourcePath, 'utf8');
       const toolsWithoutDir = ['pulselive_trends', 'pulselive_anomalies', 'pulselive_metrics'];
       toolsWithoutDir.forEach(tool => {
         expect(source).toContain(`'${tool}': []`);
