@@ -40,7 +40,7 @@
     "test-coverage"
   ],
   "author": "Sean Cheah",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/siongyuen/pulsetel.git"

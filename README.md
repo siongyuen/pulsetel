@@ -2,7 +2,7 @@
 
 **Real-time project telemetry for AI agents and developers. One command to check CI, deploys, endpoints, dependencies, and issues — with trend analysis and anomaly detection.**
 
-[![npm version](https://img.shields.io/npm/v/pulselive-cli.svg)](https://www.npmjs.com/package/pulselive-cli) [![Test Coverage](https://img.shields.io/badge/coverage-81%25%20statements-brightgreen)](https://github.com/siongyuen/pulselive) [![Tests](https://img.shields.io/badge/tests-638%20passing-brightgreen)](https://github.com/siongyuen/pulselive) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/pulselive-cli.svg)](https://www.npmjs.com/package/pulselive-cli) [![Test Coverage](https://img.shields.io/badge/coverage-81%25%20statements-brightgreen)](https://github.com/siongyuen/pulselive) [![Tests](https://img.shields.io/badge/tests-638%20passing-brightgreen)](https://github.com/siongyuen/pulselive) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Why PulseLive?
 
