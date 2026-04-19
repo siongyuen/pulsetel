@@ -2,6 +2,8 @@
 
 **Real-time project telemetry for AI agents and developers. One command to check CI, deploys, endpoints, dependencies, and issues — with trend analysis and anomaly detection.**
 
+[![npm version](https://img.shields.io/npm/v/pulselive-cli.svg)](https://www.npmjs.com/package/pulselive-cli) [![Test Coverage](https://img.shields.io/badge/coverage-81%25%20statements-brightgreen)](https://github.com/siongyuen/pulselive) [![Tests](https://img.shields.io/badge/tests-620%20passing-brightgreen)](https://github.com/siongyuen/pulselive) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 ## Why PulseLive?
 
 If you're an AI agent trying to assess project health, you have two options today:
@@ -111,11 +113,12 @@ pulselive mcp
 
 Starts an HTTP server on port 3000.
 
-### 9 Tools
+### 11 Tools
 
 | Tool | What It Returns |
 |------|----------------|
 | `pulselive_check` | Full health check (all modules) + optional trends |
+| `pulselive_quick` | Fast triage (~2s) — skips deps and coverage |
 | `pulselive_ci` | CI status + flakiness score + trend |
 | `pulselive_health` | Endpoint health + latency + baseline comparison |
 | `pulselive_deps` | Dependency audit (vulnerable + outdated) |
@@ -124,6 +127,7 @@ Starts an HTTP server on port 3000.
 | `pulselive_anomalies` | Anomaly detection (2σ from rolling mean) |
 | `pulselive_metrics` | Full telemetry: history + trends + current values |
 | `pulselive_recommend` | **Prioritised action items** ranked by severity + confidence |
+| `pulselive_status` | Lightweight health ping (sub-10ms, no API calls) |
 
 ### HTTP Query Parameters
 
@@ -296,6 +300,22 @@ webhooks:
 | `flaky` | CI flakiness score > 30% |
 
 Webhooks are HMAC-SHA256 signed when a secret is configured. Payload includes `event`, `checkType`, `severity`, `actionable`, `context`.
+
+## Test Coverage
+
+PulseLive has **620 tests** across **37 test files** with **81.5% statement coverage** and **85.7% function coverage**. All check modules use dependency injection for testability — no module-level mocking.
+
+| Module | Statements | Functions | Lines |
+|--------|-----------|----------|-------|
+| Overall | **81.5%** | **85.7%** | **81.2%** |
+| Checks (8 modules) | 86% | 90% | 88% |
+| Scanner | 88% | 92% | 89% |
+| Reporter | 99% | 100% | 99% |
+| Config | 88% | 100% | 88% |
+| Webhooks | 96% | 94% | 96% |
+| Trends | 87% | 100% | 87% |
+
+Run tests: `npx vitest run` · Coverage report: `npx vitest run --coverage`
 
 ## Security
 

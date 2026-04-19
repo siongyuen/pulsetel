@@ -35,7 +35,9 @@
     "telemetry",
     "project-health",
     "anomaly-detection",
-    "trend-analysis"
+    "trend-analysis",
+    "dependency-injection",
+    "test-coverage"
   ],
   "author": "Sean Cheah",
   "license": "MIT",
