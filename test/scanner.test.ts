@@ -125,10 +125,10 @@ describe('Scanner', () => {
   });
 
   it('uses defaultCheckEntries when no custom checks provided', () => {
-    // Smoke test — default entries should map to all 8 check types
-    expect(defaultCheckEntries.length).toBe(8);
+    // Smoke test — default entries should map to all 9 check types
+    expect(defaultCheckEntries.length).toBe(9);
     expect(defaultCheckEntries.map(e => e.type).sort()).toEqual(
-      ['ci', 'coverage', 'deploy', 'deps', 'git', 'health', 'issues', 'prs']
+      ['ci', 'coverage', 'deploy', 'deps', 'git', 'health', 'issues', 'prs', 'sentry']
     );
   });
 

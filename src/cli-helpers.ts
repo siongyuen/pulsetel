@@ -180,6 +180,18 @@ export function mapToSchemaResult(result: CheckResult): any {
         context = 'Deployments are working correctly';
       }
       break;
+    case 'sentry':
+      if (result.status === 'error') {
+        actionable = 'Fix critical errors tracked in Sentry';
+        context = 'Unresolved production errors are affecting users';
+      } else if (result.status === 'warning') {
+        actionable = 'Review and triage Sentry issues';
+        context = 'Some unresolved errors need attention';
+      } else {
+        actionable = 'No unresolved errors in Sentry';
+        context = 'All tracked errors have been resolved';
+      }
+      break;
     default:
       actionable = result.status === 'error' ? 'Investigate and resolve issues' : 'No action needed';
       context = result.message;
@@ -237,6 +249,11 @@ export function extractMetricsFromResult(result: CheckResult): any {
     case 'prs':
       if (result.details.open !== undefined) metrics.open = result.details.open;
       if (result.details.needsReview !== undefined) metrics.needsReview = result.details.needsReview;
+      break;
+    case 'sentry':
+      if (result.details.unresolved !== undefined) metrics.unresolved = result.details.unresolved;
+      if (result.details.totalEvents !== undefined) metrics.totalEvents = result.details.totalEvents;
+      if (result.details.affectedUsers !== undefined) metrics.affectedUsers = result.details.affectedUsers;
       break;
   }
 
@@ -935,6 +952,7 @@ export async function handleMultiRepoCheck(reposString: string, options: { json?
           issues: true,
           prs: true,
           deploy: true,
+          sentry: true,
           coverage: !options.quick ? { enabled: true, threshold: 80 } : { enabled: false }
         },
         otel: options.otel !== undefined ? { enabled: options.otel } : undefined

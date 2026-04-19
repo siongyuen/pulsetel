@@ -245,6 +245,8 @@ export class MCPServer {
         return this.pulseliveStatus();
       case 'pulselive_recommend':
         return this.pulseliveRecommend(scanner, history, trendAnalyzer);
+      case 'pulselive_sentry':
+        return this.pulseliveSentry(scanner);
       case 'pulselive_multi_repo':
         if (params?.repos) {
           return this.pulseliveMultiRepoCheck(params.repos, false, params?.includeTrends);
@@ -699,6 +701,13 @@ export class MCPServer {
       totalHealthy,
       overallStatus
     };
+  }
+
+  // ── pulselive_sentry: Sentry error tracking ───
+
+  private async pulseliveSentry(scanner: Scanner): Promise<any> {
+    const result = await scanner.runSingleCheck('sentry');
+    return enrichResult(result);
   }
 
   // ── pulselive_recommend: prioritised actionable recommendations ───

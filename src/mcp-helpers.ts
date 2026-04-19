@@ -17,7 +17,8 @@ const VALID_TOOLS = [
   'pulselive_anomalies',
   'pulselive_metrics',
   'pulselive_recommend',
-  'pulselive_status'
+  'pulselive_status',
+  'pulselive_sentry'
 ];
 
 export { VALID_TOOLS };
@@ -60,7 +61,8 @@ export function getRequiredParamsForTool(tool: string): string[] {
     'pulselive_trends': [],
     'pulselive_anomalies': [],
     'pulselive_metrics': [],
-    'pulselive_status': []
+    'pulselive_status': [],
+    'pulselive_sentry': []
   };
 
   return toolParams[tool] || [];

@@ -146,6 +146,7 @@ const header = this.getHeader(type);
       case 'issues': return 'Issues';
       case 'prs': return 'Pull Requests';
       case 'coverage': return 'Coverage';
+      case 'sentry': return 'Sentry';
       default: return type;
     }
   }
@@ -160,6 +161,7 @@ const header = this.getHeader(type);
       'Issues': '🐛',
       'Pull Requests': '🔀',
       'Coverage': '📊',
+      'Sentry': '🔴',
     };
     
     const icon = icons[type] || '📊';

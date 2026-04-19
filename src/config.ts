@@ -48,6 +48,7 @@ export interface PulseliveConfig {
     issues?: boolean;
     deploy?: boolean;
     prs?: boolean;
+    sentry?: boolean;
     coverage?: {
       enabled?: boolean;
       threshold?: number;
@@ -65,6 +66,11 @@ export interface PulseliveConfig {
     protocol?: 'http' | 'file';
     service_name?: string;
     export_dir?: string;
+  };
+  sentry?: {
+    organization: string;
+    project: string;
+    token?: string;
   };
 }
 
@@ -182,7 +188,7 @@ export class ConfigLoader {
     // Validate checks section
     if (config.checks) {
       const checksKeys = Object.keys(config.checks);
-      const validChecksKeys = ['ci', 'deps', 'git', 'health', 'issues', 'deploy', 'prs', 'coverage'];
+      const validChecksKeys = ['ci', 'deps', 'git', 'health', 'issues', 'deploy', 'prs', 'coverage', 'sentry'];
       
       for (const key of checksKeys) {
         if (!validChecksKeys.includes(key)) {

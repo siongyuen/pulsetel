@@ -7,6 +7,7 @@ import { IssuesCheck } from './checks/issues';
 import { DepsCheck } from './checks/deps';
 import { CoverageCheck } from './checks/coverage';
 import { PRsCheck } from './checks/prs';
+import { SentryCheck } from './checks/sentry';
 import { WebhookNotifier } from './webhooks';
 import { initOtel, withOtelSpan, exportResults, shutdownOtel } from './otel';
 
@@ -113,6 +114,7 @@ export const defaultCheckEntries: CheckEntry[] = [
   { type: 'prs', factory: (cfg) => new PRsCheck(cfg), retryable: true, configKey: 'prs' },
   { type: 'coverage', factory: (cfg) => new CoverageCheck(cfg), retryable: false, configKey: 'coverage' },
   { type: 'deps', factory: (cfg) => new DepsCheck(cfg), retryable: false, configKey: 'deps' },
+  { type: 'sentry', factory: (cfg) => new SentryCheck(cfg), retryable: true, configKey: 'sentry' },
 ];
 
 export class Scanner {

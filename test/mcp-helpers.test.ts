@@ -34,8 +34,8 @@ describe('mcp-helpers', () => {
       expect(VALID_TOOLS).toContain('pulselive_status');
     });
 
-    it('has 11 tools total', () => {
-      expect(VALID_TOOLS).toHaveLength(11);
+    it('has 12 tools total', () => {
+      expect(VALID_TOOLS).toHaveLength(12);
     });
   });
 

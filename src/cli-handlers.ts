@@ -173,7 +173,8 @@ export class CLIHandlers {
         issues: true,
         prs: true,
         deploy: true,
-        coverage: { enabled: true, threshold: 80 }
+        coverage: { enabled: true, threshold: 80 },
+        sentry: true
       },
       webhooks: [] as Array<{ url: string; events: string[]; secret?: string }>
     };

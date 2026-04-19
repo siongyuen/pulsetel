@@ -210,6 +210,20 @@ const TOOLS = [
       },
       estimated_duration_ms: 5
     }
+  },
+  {
+    name: 'pulselive_sentry',
+    description: 'Check Sentry error tracking. Returns unresolved issue counts, top issues by frequency, error level breakdown, affected users, and release attribution. Requires sentry.organization and sentry.project in config, SENTRY_TOKEN env var.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dir: {
+          type: 'string',
+          description: 'Absolute path to the project directory. Defaults to cwd.'
+        }
+      },
+      estimated_duration_ms: 2000
+    }
   }
 ];
 
