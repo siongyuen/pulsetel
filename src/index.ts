@@ -15,6 +15,8 @@ import os from 'os';
 
 import { VERSION } from './version';
 import { PulseliveConfig } from './config';
+import { mapToSchemaResult, extractMetricsFromResult, formatTimeAgo, compareWithPrevious, getTrendIcon, computeMultiRepoSummary, loadHistory, saveHistory, FixResult } from './cli-helpers';
+
 
 const program = new Command();
 
@@ -809,266 +811,6 @@ program
 program.parse(process.argv);
 
 // Helper method to map CheckResult to schema-compliant format
-function mapToSchemaResult(result: CheckResult): any {
-  // Map status to severity
-  let severity: 'low' | 'medium' | 'high' | 'critical' = 'low';
-  switch (result.status) {
-    case 'error':
-      severity = 'critical';
-      break;
-    case 'warning':
-      severity = 'medium';
-      break;
-    case 'success':
-      severity = 'low';
-      break;
-  }
-
-  // Generate actionable text based on check type and status
-  let actionable = '';
-  let context = '';
-  
-  switch (result.type) {
-    case 'deps':
-      if (result.status === 'error') {
-        actionable = 'Run npm audit fix to address critical vulnerabilities';
-        context = 'Vulnerable dependencies pose security risks';
-      } else if (result.status === 'warning') {
-        actionable = 'Update outdated packages and review vulnerabilities';
-        context = 'Outdated or vulnerable dependencies are security and stability risks';
-      } else {
-        actionable = 'No action needed - dependencies are up to date';
-        context = 'All dependencies are current and secure';
-      }
-      break;
-    case 'ci':
-      if (result.status === 'error') {
-        actionable = 'Investigate CI failures and flaky tests';
-        context = 'CI failures block deployments and indicate quality issues';
-      } else if (result.status === 'warning') {
-        actionable = 'Review CI flakiness and test stability';
-        context = 'Flaky tests reduce confidence in CI results';
-      } else {
-        actionable = 'No action needed - CI is healthy';
-        context = 'CI pipeline is running successfully';
-      }
-      break;
-    case 'git':
-      if (result.status === 'error') {
-        actionable = 'Commit changes and push to remote';
-        context = 'Uncommitted changes may be lost';
-      } else if (result.status === 'warning') {
-        actionable = 'Review branch status and uncommitted changes';
-        context = 'Branch divergence may indicate outdated local state';
-      } else {
-        actionable = 'No action needed - Git status is clean';
-        context = 'Repository is in sync with remote';
-      }
-      break;
-    case 'issues':
-      if (result.status === 'error') {
-        actionable = 'Address critical open issues';
-        context = 'Open issues indicate unresolved problems';
-      } else if (result.status === 'warning') {
-        actionable = 'Review and prioritize open issues';
-        context = 'Open issues should be managed and prioritized';
-      } else {
-        actionable = 'No action needed - no critical issues';
-        context = 'Issue backlog is under control';
-      }
-      break;
-    case 'prs':
-      if (result.status === 'error') {
-        actionable = 'Review and merge pending pull requests';
-        context = 'Stale pull requests block progress';
-      } else if (result.status === 'warning') {
-        actionable = 'Review pull requests needing attention';
-        context = 'Pull requests require code review and feedback';
-      } else {
-        actionable = 'No action needed - pull requests are up to date';
-        context = 'Pull request workflow is healthy';
-      }
-      break;
-    case 'coverage':
-      if (result.status === 'error') {
-        actionable = 'Improve test coverage to meet threshold';
-        context = 'Low test coverage increases risk of bugs';
-      } else if (result.status === 'warning') {
-        actionable = 'Review test coverage and add missing tests';
-        context = 'Test coverage helps prevent regressions';
-      } else {
-        actionable = 'No action needed - coverage meets requirements';
-        context = 'Test coverage is at acceptable levels';
-      }
-      break;
-    case 'health':
-      if (result.status === 'error') {
-        actionable = 'Investigate endpoint failures and performance issues';
-        context = 'Endpoint failures indicate service problems';
-      } else if (result.status === 'warning') {
-        actionable = 'Monitor endpoint performance and latency';
-        context = 'Endpoint latency may affect user experience';
-      } else {
-        actionable = 'No action needed - endpoints are healthy';
-        context = 'All endpoints are responding normally';
-      }
-      break;
-    case 'deploy':
-      if (result.status === 'error') {
-        actionable = 'Investigate deployment failures';
-        context = 'Deployment failures prevent updates from reaching users';
-      } else if (result.status === 'warning') {
-        actionable = 'Review deployment status and logs';
-        context = 'Deployment issues may affect service availability';
-      } else {
-        actionable = 'No action needed - deployments are successful';
-        context = 'Deployments are working correctly';
-      }
-      break;
-    default:
-      actionable = result.status === 'error' ? 'Investigate and resolve issues' : 'No action needed';
-      context = result.message;
-  }
-
-  return {
-    check: result.type,
-    status: result.status,
-    severity: severity,
-    confidence: 'high', // Default confidence
-    actionable: actionable,
-    context: context,
-    message: result.message,
-    details: result.details,
-    duration: result.duration
-  };
-}
-
-interface FixResult {
-  target: string;
-  status: 'success' | 'partial' | 'failed';
-  success: boolean;
-  partial?: boolean;
-  message: string;
-  changes?: string[];
-  dryRun?: boolean;
-  details?: any;
-}
-
-function saveHistory(results: CheckResult[]): void {
-  try {
-    const historyDir = '.pulselive-history';
-
-    if (!existsSync(historyDir)) {
-      mkdirSync(historyDir, { recursive: true });
-    }
-
-    const historyEntry: HistoryEntry = {
-      timestamp: new Date().toISOString(),
-      hostname: os.hostname(),
-      pulselive_version: VERSION,
-      results: results.map((result: CheckResult) => ({
-        type: result.type,
-        status: result.status,
-        message: result.message,
-        duration: result.duration,
-        metrics: extractMetricsFromResult(result)
-      }))
-    };
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filePath = path.join(historyDir, `run-${timestamp}.json`);
-    writeFileSync(filePath, JSON.stringify(historyEntry, null, 2));
-  } catch {
-    // Silent fail - history is best-effort
-  }
-}
-
-function extractMetricsFromResult(result: CheckResult): any {
-  const metrics: any = {};
-  if (!result.details) return metrics;
-
-  switch (result.type) {
-    case 'ci':
-      if (result.details.runCount !== undefined) metrics.runCount = result.details.runCount;
-      if (result.details.failCount !== undefined) metrics.failCount = result.details.failCount;
-      if (result.details.flakinessScore !== undefined) metrics.flakinessScore = result.details.flakinessScore;
-      break;
-    case 'deps':
-      if (result.details.outdated !== undefined) metrics.outdated = result.details.outdated;
-      if (result.details.vulnerable !== undefined) metrics.vulnerable = result.details.vulnerable;
-      if (result.details.total !== undefined) metrics.total = result.details.total;
-      break;
-    case 'issues':
-      if (result.details.open !== undefined) metrics.open = result.details.open;
-      if (result.details.closed !== undefined) metrics.closed = result.details.closed;
-      break;
-    case 'coverage':
-      if (result.details.percentage !== undefined) metrics.percentage = result.details.percentage;
-      break;
-    case 'health':
-      if (Array.isArray(result.details)) {
-        metrics.endpoints = result.details.map((ep: any) => ({
-          url: ep.url || ep.name,
-          latency: ep.responseTime,
-          status: ep.status
-        }));
-      }
-      break;
-    case 'git':
-      if (result.details.uncommitted !== undefined) metrics.uncommitted = result.details.uncommitted;
-      break;
-    case 'prs':
-      if (result.details.open !== undefined) metrics.open = result.details.open;
-      if (result.details.needsReview !== undefined) metrics.needsReview = result.details.needsReview;
-      break;
-  }
-
-  return metrics;
-}
-
-function loadHistory(historyDir: string = '.pulselive-history'): HistoryEntry[] {
-  try {
-    if (!existsSync(historyDir)) {
-      return [];
-    }
-
-    const files = readdirSync(historyDir);
-    const history: HistoryEntry[] = [];
-
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        const filePath = path.join(historyDir, file);
-        const content = readFileSync(filePath, 'utf8');
-        history.push(JSON.parse(content));
-      }
-    }
-
-    return history;
-  } catch {
-    return [];
-  }
-}
-
-function formatTimeAgo(timestamp: string): string {
-  const now = new Date();
-  const then = new Date(timestamp);
-  const diffMs = now.getTime() - then.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHours = Math.floor(diffMin / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffDays > 0) {
-    return `${diffDays}d ago`;
-  } else if (diffHours > 0) {
-    return `${diffHours}h ago`;
-  } else if (diffMin > 0) {
-    return `${diffMin}m ago`;
-  } else {
-    return `${diffSec}s ago`;
-  }
-}
-
 async function handleMultiRepoCheck(reposString: string, options: { json?: boolean; quick?: boolean; exitCode?: boolean }) {
   const repoList = reposString.split(',').map(r => r.trim()).filter(r => r.length > 0);
   
@@ -1191,100 +933,6 @@ async function handleMultiRepoCheck(reposString: string, options: { json?: boole
   }
 }
 
-function computeMultiRepoSummary(results: Array<{ repo: string; results: CheckResult[]; error?: string }>): any {
-  let reposWithErrors = 0;
-  let reposWithWarnings = 0;
-  let totalCritical = 0;
-  let totalWarnings = 0;
-  let totalHealthy = 0;
-  
-  for (const result of results) {
-    if (result.error) {
-      reposWithErrors++;
-      continue;
-    }
-    
-    const critical = result.results.filter(r => r.status === 'error').length;
-    const warnings = result.results.filter(r => r.status === 'warning').length;
-    const healthy = result.results.filter(r => r.status === 'success').length;
-    
-    totalCritical += critical;
-    totalWarnings += warnings;
-    totalHealthy += healthy;
-    
-    if (critical > 0) {
-      reposWithErrors++;
-    } else if (warnings > 0) {
-      reposWithWarnings++;
-    }
-  }
-  
-  const overallStatus = reposWithErrors > 0 ? 'critical' : reposWithWarnings > 0 ? 'degraded' : 'healthy';
-  
-  return {
-    reposWithErrors,
-    reposWithWarnings,
-    totalCritical,
-    totalWarnings,
-    totalHealthy,
-    overallStatus
-  };
-}
-
-function compareWithPrevious(currentResults: CheckResult[], history?: HistoryEntry[]): string {
-  try {
-    const historyToUse = history || loadHistory();
-
-    if (historyToUse.length === 0) {
-      return 'No previous runs available for comparison';
-    }
-
-    // Sort newest first
-    historyToUse.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    const previousRun = historyToUse[0];
-
-    let comparison = 'COMPARISON WITH PREVIOUS RUN\n';
-    comparison += '=============================\n\n';
-
-    const previousMap: Record<string, any> = {};
-    previousRun.results.forEach((result: any) => {
-      previousMap[result.type] = result;
-    });
-
-    let hasChanges = false;
-
-    currentResults.forEach((currentResult: CheckResult) => {
-      const previousResult = previousMap[currentResult.type];
-
-      if (previousResult && previousResult.status !== currentResult.status) {
-        hasChanges = true;
-        const trendIcon = getTrendIcon(previousResult.status, currentResult.status);
-        comparison += `${trendIcon} ${currentResult.type}: ${previousResult.status} → ${currentResult.status}\n`;
-        comparison += `   Previous: ${previousResult.message}\n`;
-        comparison += `   Current:  ${currentResult.message}\n\n`;
-      }
-    });
-
-    if (!hasChanges) {
-      return 'No significant changes detected since previous run';
-    }
-
-    return comparison;
-  } catch {
-    return 'Comparison failed';
-  }
-}
-
-function getTrendIcon(previousStatus: string, currentStatus: string): string {
-  const statusOrder: Record<string, number> = { 'error': 1, 'warning': 2, 'success': 3 };
-  const previousScore = statusOrder[previousStatus] || 0;
-  const currentScore = statusOrder[currentStatus] || 0;
-
-  if (currentScore > previousScore) return '↑';
-  if (currentScore < previousScore) return '↓';
-  return '→';
-}
-
 function printTrendResult(trend: any): void {
   const directionIcon = trend.direction === 'improving' ? '📈' :
                          trend.direction === 'degrading' ? '📉' : '➡️';
@@ -1308,7 +956,6 @@ async function fixDependencies(workingDir: string, dryRun: boolean, skipConfirma
   };
 
   try {
-    // Check if package.json exists
     const packageJsonPath = path.join(workingDir, 'package.json');
     if (!existsSync(packageJsonPath)) {
       return {
@@ -1321,7 +968,6 @@ async function fixDependencies(workingDir: string, dryRun: boolean, skipConfirma
       };
     }
 
-    // Check current npm audit status
     let auditOutput = '';
     try {
       auditOutput = execFileSync('npm', ['audit', '--json'], {
@@ -1330,7 +976,6 @@ async function fixDependencies(workingDir: string, dryRun: boolean, skipConfirma
         stdio: ['pipe', 'pipe', 'pipe']
       });
     } catch (error: any) {
-      // npm audit exits 1 when vulnerabilities found, but still outputs JSON
       if (error.stdout) {
         auditOutput = error.stdout;
       }
@@ -1350,7 +995,6 @@ async function fixDependencies(workingDir: string, dryRun: boolean, skipConfirma
       };
     }
 
-    // Count vulnerabilities before fix
     const vulnerabilitiesBefore = auditData?.vulnerabilities ? Object.keys(auditData.vulnerabilities).length : 0;
 
     if (vulnerabilitiesBefore === 0) {
@@ -1364,7 +1008,6 @@ async function fixDependencies(workingDir: string, dryRun: boolean, skipConfirma
       };
     }
 
-    // Show what would be fixed
     const changes: string[] = [];
     if (vulnerabilitiesBefore > 0) {
       changes.push(`${vulnerabilitiesBefore} vulnerabilities detected`);
@@ -1381,21 +1024,15 @@ async function fixDependencies(workingDir: string, dryRun: boolean, skipConfirma
       };
     }
 
-    // Ask for confirmation unless --yes flag is passed
     if (!skipConfirmation) {
       console.log(`🔧 Ready to fix ${vulnerabilitiesBefore} vulnerabilities`);
       console.log('   Changes that will be made:');
       changes.forEach(change => console.log(`     - ${change}`));
       console.log('\n⚠️  This will modify package.json and package-lock.json');
       console.log('Continue? (y/N) ');
-      
-      // Note: In a real CLI, we would use readline for user input
-      // For now, we'll assume confirmation for automated testing
-      // In production, this would wait for user input
       console.log('(Assuming confirmation for automated testing)');
     }
 
-    // Run npm audit fix
     try {
       const fixOutput = execFileSync('npm', ['audit', 'fix', '--json'], {
         cwd: workingDir,
@@ -1407,11 +1044,9 @@ async function fixDependencies(workingDir: string, dryRun: boolean, skipConfirma
       try {
         fixData = JSON.parse(fixOutput);
       } catch {
-        // If JSON parse fails, it might still have worked
         fixData = {};
       }
 
-      // Check vulnerabilities after fix
       let auditAfterOutput = '';
       try {
         auditAfterOutput = execFileSync('npm', ['audit', '--json'], {
