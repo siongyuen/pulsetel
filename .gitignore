@@ -13,4 +13,5 @@ standalone-mcp-server.js
 run-mcp-server.js
 start-mcp.js
 start-server-direct.js
-test-mcp.js
+test-mcp.js.pulsetel-history/
+dist/

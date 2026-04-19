@@ -17,7 +17,7 @@ describe('Reporter', () => {
       ];
 
       const output = reporter.format(results);
-      expect(output).toContain('PULSELIVE');
+      expect(output).toContain('PULSETEL');
       expect(output).toContain('CI checks passed');
       expect(output).toContain('Outdated dependencies');
       expect(output).toContain('Summary:');
@@ -30,7 +30,7 @@ describe('Reporter', () => {
       ];
 
       const output = reporterNoColor.format(results);
-      expect(output).toContain('PULSELIVE');
+      expect(output).toContain('PULSETEL');
       expect(output).toContain('CI checks passed');
       expect(output).not.toContain('\u001b['); // No ANSI color codes
     });
@@ -70,7 +70,7 @@ describe('Reporter', () => {
       ];
 
       const output = reporter.formatVerbose(results);
-      expect(output).toContain('PULSELIVE');
+      expect(output).toContain('PULSETEL');
       expect(output).toContain('verbose');
       expect(output).toContain('CI checks passed');
       expect(output).toContain('[100ms]');
@@ -125,9 +125,9 @@ describe('Reporter', () => {
       const output = reporter.formatJunit(results);
       expect(output).toContain('<?xml version="1.0" encoding="UTF-8"?>');
       expect(output).toContain('<testsuites>');
-      expect(output).toContain('<testsuite name="pulselive" tests="2">');
-      expect(output).toContain('<testcase name="ci" classname="pulselive.ci">');
-      expect(output).toContain('<testcase name="deps" classname="pulselive.deps">');
+      expect(output).toContain('<testsuite name="pulsetel" tests="2">');
+      expect(output).toContain('<testcase name="ci" classname="pulsetel.ci">');
+      expect(output).toContain('<testcase name="deps" classname="pulsetel.deps">');
       expect(output).toContain('<failure message="Critical vulnerability">');
       expect(output).toContain('</testsuites>');
     });
@@ -465,7 +465,7 @@ describe('Reporter', () => {
       ];
 
       const output = (reporter as any).formatColored(results);
-      expect(output).toContain('PULSELIVE');
+      expect(output).toContain('PULSETEL');
       expect(output).toContain('🔄 CI/CD:');
       expect(output).toContain('✅');
       expect(output).toContain('CI passed');
@@ -502,7 +502,7 @@ describe('Reporter', () => {
       ];
 
       const output = (reporterPlain as any).formatPlain(results);
-      expect(output).toContain('PULSELIVE');
+      expect(output).toContain('PULSETEL');
       expect(output).toContain('🔄 CI/CD:');
       expect(output).toContain('✅');
       expect(output).toContain('CI passed');

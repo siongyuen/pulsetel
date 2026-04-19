@@ -47,7 +47,7 @@ export class SentryCheck {
         status: 'warning',
         severity: 'low',
         confidence: 'high',
-        message: 'Sentry not configured — add sentry.organization and sentry.project to .pulselive.yml',
+        message: 'Sentry not configured — add sentry.organization and sentry.project to .pulsetel.yml',
         actionable: 'Configure Sentry integration to monitor production errors',
         context: 'Sentry provides real-time error tracking and alerting',
       };
@@ -60,7 +60,7 @@ export class SentryCheck {
         severity: 'low',
         confidence: 'high',
         message: 'Sentry organization not configured',
-        actionable: 'Set sentry.organization in .pulselive.yml',
+        actionable: 'Set sentry.organization in .pulsetel.yml',
         context: 'Organization slug is required to query the Sentry API',
       };
     }
@@ -72,7 +72,7 @@ export class SentryCheck {
         severity: 'low',
         confidence: 'high',
         message: 'Sentry project not configured',
-        actionable: 'Set sentry.project in .pulselive.yml',
+        actionable: 'Set sentry.project in .pulsetel.yml',
         context: 'Project slug is required to query the Sentry API',
       };
     }

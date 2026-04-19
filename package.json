@@ -1,10 +1,10 @@
 {
-  "name": "pulselive-cli",
-  "version": "1.3.2",
+  "name": "pulsetel-cli",
+  "version": "2.0.0",
   "description": "Real-time project telemetry for AI agents and developers. One command to check CI, deploys, endpoints, dependencies, and issues.",
   "main": "dist/index.js",
   "bin": {
-    "pulselive": "dist/index.js"
+    "pulsetel": "dist/index.js"
   },
   "files": [
     "dist",
@@ -43,12 +43,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/siongyuen/pulselive.git"
+    "url": "git+https://github.com/siongyuen/pulsetel.git"
   },
   "bugs": {
-    "url": "https://github.com/siongyuen/pulselive/issues"
+    "url": "https://github.com/siongyuen/pulsetel/issues"
   },
-  "homepage": "https://github.com/siongyuen/pulselive#readme",
+  "homepage": "https://github.com/siongyuen/pulsetel#readme",
   "engines": {
     "node": ">=18.0.0"
   },

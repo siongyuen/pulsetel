@@ -9,9 +9,9 @@ describe('Directory Argument Support', () => {
 
   beforeEach(() => {
     // Create a temporary test directory
-    testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulselive-test-'));
+    testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulsetel-test-'));
     
-    // Create a minimal .pulselive.yml config
+    // Create a minimal .pulsetel.yml config
     const configContent = `
 github:
   repo: test/repo
@@ -25,7 +25,7 @@ checks:
   prs: false
   coverage: false
 `;
-    fs.writeFileSync(path.join(testDir, '.pulselive.yml'), configContent);
+    fs.writeFileSync(path.join(testDir, '.pulsetel.yml'), configContent);
   });
 
   afterEach(() => {
@@ -44,7 +44,7 @@ checks:
         encoding: 'utf8'
       });
       
-      expect(result).toContain('PULSELIVE');
+      expect(result).toContain('PULSETEL');
       expect(result).toContain('Summary');
     });
 
@@ -54,7 +54,7 @@ checks:
         encoding: 'utf8'
       });
       
-      expect(result).toContain('PULSELIVE');
+      expect(result).toContain('PULSETEL');
       expect(result).toContain('Summary');
     });
 
@@ -74,7 +74,7 @@ checks:
         encoding: 'utf8'
       });
       
-      expect(result).toContain('pulselive');
+      expect(result).toContain('pulsetel');
       expect(result).toContain('badge');
     });
 
@@ -84,7 +84,7 @@ checks:
         encoding: 'utf8'
       });
       
-      expect(result).toContain('PulseLive Project Health Report');
+      expect(result).toContain('PulseTel Project Health Report');
       expect(result).toContain('Summary');
     });
   });
@@ -93,7 +93,7 @@ checks:
     it('should use provided directory for git commands', () => {
       // This test verifies that the config loader respects the baseDir parameter
       const ConfigLoader = require('../dist/config.js').ConfigLoader;
-      const configLoader = new ConfigLoader(path.join(testDir, '.pulselive.yml'));
+      const configLoader = new ConfigLoader(path.join(testDir, '.pulsetel.yml'));
       const config = configLoader.autoDetect(testDir);
       
       expect(config).toBeDefined();
@@ -106,7 +106,7 @@ checks:
       const Scanner = require('../dist/scanner.js').Scanner;
       const ConfigLoader = require('../dist/config.js').ConfigLoader;
       
-      const configLoader = new ConfigLoader(path.join(testDir, '.pulselive.yml'));
+      const configLoader = new ConfigLoader(path.join(testDir, '.pulsetel.yml'));
       const config = configLoader.autoDetect(testDir);
       const scanner = new Scanner(config, testDir);
       

@@ -153,7 +153,7 @@ describe('handleMultiRepoCheck', () => {
       });
       
       const parsed = JSON.parse(jsonOutput?.[0]);
-      expect(parsed.schema_url).toContain('github.com/siongyuen/pulselive');
+      expect(parsed.schema_url).toContain('github.com/siongyuen/pulsetel');
     });
 
     it('should include duration in JSON output', async () => {

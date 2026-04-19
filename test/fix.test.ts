@@ -9,7 +9,7 @@ describe('Fix Command', () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = `/tmp/pulselive-fix-test-${Date.now()}`;
+    testDir = `/tmp/pulsetel-fix-test-${Date.now()}`;
     mkdirSync(testDir, { recursive: true });
   });
 

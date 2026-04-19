@@ -144,7 +144,7 @@ describe('OpenTelemetry Integration', () => {
     
     // Check for expected metrics
     const metricsData = metricLines.map(line => JSON.parse(line));
-    const hasHealthScore = metricsData.some(m => m.name === 'pulselive.health.score');
+    const hasHealthScore = metricsData.some(m => m.name === 'pulsetel.health.score');
     expect(hasHealthScore).toBe(true);
   });
 
@@ -189,7 +189,7 @@ describe('OpenTelemetry Integration', () => {
     const metricsData = metricLines.map(line => JSON.parse(line));
 
     // Find health score metrics
-    const healthScores = metricsData.filter(m => m.name === 'pulselive.health.score');
+    const healthScores = metricsData.filter(m => m.name === 'pulsetel.health.score');
     expect(healthScores.length).toBe(3);
 
     // Verify scores: success=100, warning=50, error=0

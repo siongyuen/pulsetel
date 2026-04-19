@@ -179,8 +179,8 @@ export class WebhookNotifier {
       try {
         const headers: any = {
           'Content-Type': 'application/json',
-          'X-PulseLive-Event': payload.event,
-          'X-PulseLive-Version': '0.3.0'
+          'X-PulseTel-Event': payload.event,
+          'X-PulseTel-Version': '0.3.0'
         };
 
         // HMAC-SHA256 signing if secret is configured
@@ -188,7 +188,7 @@ export class WebhookNotifier {
           const signature = createHmac('sha256', webhook.secret)
             .update(body)
             .digest('hex');
-          headers['X-PulseLive-Signature'] = `sha256=${signature}`;
+          headers['X-PulseTel-Signature'] = `sha256=${signature}`;
         }
 
         const controller = new AbortController();
@@ -224,7 +224,7 @@ export class WebhookNotifier {
 
   private loadHistory(): HistoryEntry[] {
     try {
-      const historyDir = '.pulselive-history';
+      const historyDir = '.pulsetel-history';
       if (!this.deps.existsSync(historyDir)) return [];
 
       const files = this.deps.readdirSync(historyDir);

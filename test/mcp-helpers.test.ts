@@ -21,17 +21,17 @@ describe('mcp-helpers', () => {
 
   describe('VALID_TOOLS', () => {
     it('includes all expected MCP tools', () => {
-      expect(VALID_TOOLS).toContain('pulselive_check');
-      expect(VALID_TOOLS).toContain('pulselive_quick');
-      expect(VALID_TOOLS).toContain('pulselive_ci');
-      expect(VALID_TOOLS).toContain('pulselive_health');
-      expect(VALID_TOOLS).toContain('pulselive_deps');
-      expect(VALID_TOOLS).toContain('pulselive_summary');
-      expect(VALID_TOOLS).toContain('pulselive_trends');
-      expect(VALID_TOOLS).toContain('pulselive_anomalies');
-      expect(VALID_TOOLS).toContain('pulselive_metrics');
-      expect(VALID_TOOLS).toContain('pulselive_recommend');
-      expect(VALID_TOOLS).toContain('pulselive_status');
+      expect(VALID_TOOLS).toContain('pulsetel_check');
+      expect(VALID_TOOLS).toContain('pulsetel_quick');
+      expect(VALID_TOOLS).toContain('pulsetel_ci');
+      expect(VALID_TOOLS).toContain('pulsetel_health');
+      expect(VALID_TOOLS).toContain('pulsetel_deps');
+      expect(VALID_TOOLS).toContain('pulsetel_summary');
+      expect(VALID_TOOLS).toContain('pulsetel_trends');
+      expect(VALID_TOOLS).toContain('pulsetel_anomalies');
+      expect(VALID_TOOLS).toContain('pulsetel_metrics');
+      expect(VALID_TOOLS).toContain('pulsetel_recommend');
+      expect(VALID_TOOLS).toContain('pulsetel_status');
     });
 
     it('has 12 tools total', () => {
@@ -70,19 +70,19 @@ describe('mcp-helpers', () => {
 
   describe('getRequiredParamsForTool', () => {
     it('returns dir for check tool', () => {
-      expect(getRequiredParamsForTool('pulselive_check')).toEqual(['dir']);
+      expect(getRequiredParamsForTool('pulsetel_check')).toEqual(['dir']);
     });
 
     it('returns dir for quick tool', () => {
-      expect(getRequiredParamsForTool('pulselive_quick')).toEqual(['dir']);
+      expect(getRequiredParamsForTool('pulsetel_quick')).toEqual(['dir']);
     });
 
     it('returns empty for trends tool', () => {
-      expect(getRequiredParamsForTool('pulselive_trends')).toEqual([]);
+      expect(getRequiredParamsForTool('pulsetel_trends')).toEqual([]);
     });
 
     it('returns empty for anomalies tool', () => {
-      expect(getRequiredParamsForTool('pulselive_anomalies')).toEqual([]);
+      expect(getRequiredParamsForTool('pulsetel_anomalies')).toEqual([]);
     });
 
     it('returns empty for unknown tool', () => {
@@ -90,7 +90,7 @@ describe('mcp-helpers', () => {
     });
 
     it('returns dir for all directory-based tools', () => {
-      const dirTools = ['pulselive_check', 'pulselive_quick', 'pulselive_ci', 'pulselive_health', 'pulselive_deps', 'pulselive_summary', 'pulselive_recommend'];
+      const dirTools = ['pulsetel_check', 'pulsetel_quick', 'pulsetel_ci', 'pulsetel_health', 'pulsetel_deps', 'pulsetel_summary', 'pulsetel_recommend'];
       dirTools.forEach(tool => {
         expect(getRequiredParamsForTool(tool)).toEqual(['dir']);
       });

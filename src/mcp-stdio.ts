@@ -10,13 +10,13 @@ import { VERSION } from './version';
  * Compatible with Claude Desktop, Cursor, Smithery, and any MCP client
  * that uses the standard stdio transport.
  *
- * Usage: pulselive mcp-stdio
+ * Usage: pulsetel mcp-stdio
  * Config (claude_desktop_config.json):
  * {
  *   "mcpServers": {
- *     "pulselive": {
+ *     "pulsetel": {
  *       "command": "npx",
- *       "args": ["-y", "pulselive-cli", "mcp-stdio"]
+ *       "args": ["-y", "pulsetel-cli", "mcp-stdio"]
  *     }
  *   }
  * }
@@ -42,8 +42,8 @@ interface JSONRPCResponse {
 
 const TOOLS = [
   {
-    name: 'pulselive_check',
-    description: 'Run all health checks (CI, deploy, health, git, issues, PRs, coverage, deps) and return a structured report with severity, confidence, and actionable recommendations. Takes ~8-12 seconds due to npm audit. Use pulselive_quick for fast triage (~1-2s).',
+    name: 'pulsetel_check',
+    description: 'Run all health checks (CI, deploy, health, git, issues, PRs, coverage, deps) and return a structured report with severity, confidence, and actionable recommendations. Takes ~8-12 seconds due to npm audit. Use pulsetel_quick for fast triage (~1-2s).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -64,8 +64,8 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_quick',
-    description: 'Fast triage — runs CI, deploy, health, git, issues, and PRs checks only (skips deps and coverage for speed). Returns in ~1-2 seconds instead of ~8-12. Use this for quick triage, then pulselive_check for full results if needed.',
+    name: 'pulsetel_quick',
+    description: 'Fast triage — runs CI, deploy, health, git, issues, and PRs checks only (skips deps and coverage for speed). Returns in ~1-2 seconds instead of ~8-12. Use this for quick triage, then pulsetel_check for full results if needed.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -82,7 +82,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_ci',
+    name: 'pulsetel_ci',
     description: 'Check CI status. Returns flakiness score, recent run results, and trend direction for the project\'s CI pipeline.',
     inputSchema: {
       type: 'object',
@@ -95,7 +95,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_health',
+    name: 'pulsetel_health',
     description: 'Check HTTP endpoint health. Returns response times, baseline comparisons, and status codes for configured endpoints. SSRF-protected.',
     inputSchema: {
       type: 'object',
@@ -108,7 +108,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_deps',
+    name: 'pulsetel_deps',
     description: 'Check dependency health. Returns vulnerability counts, outdated packages, and total dependency count from npm audit.',
     inputSchema: {
       type: 'object',
@@ -121,7 +121,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_summary',
+    name: 'pulsetel_summary',
     description: 'Get a concise project health summary: critical/warning/passing counts, overall status, top anomalies, and overall trend direction.',
     inputSchema: {
       type: 'object',
@@ -134,7 +134,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_trends',
+    name: 'pulsetel_trends',
     description: 'Analyze trends for check types over recent history. Returns direction (improving/stable/degrading), delta, velocity, and anomaly flags.',
     inputSchema: {
       type: 'object',
@@ -156,7 +156,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_anomalies',
+    name: 'pulsetel_anomalies',
     description: 'Detect anomalies in project health metrics. Uses 2σ from rolling mean to identify statistically significant deviations.',
     inputSchema: {
       type: 'object',
@@ -169,7 +169,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_telemetry',
+    name: 'pulsetel_telemetry',
     description: 'Get current OpenTelemetry configuration status and last export info. Returns OTel configuration, service name, endpoint, protocol, and export status.',
     inputSchema: {
       type: 'object',
@@ -185,7 +185,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_recommend',
+    name: 'pulsetel_recommend',
     description: 'Get prioritised actionable recommendations ranked by severity and confidence. Returns a ranked list of what to fix first, with specific actions and context.',
     inputSchema: {
       type: 'object',
@@ -198,7 +198,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_status',
+    name: 'pulsetel_status',
     description: 'Lightweight health ping — reads most recent check result from history (no API calls, no network). Returns immediately with healthy boolean, critical/warning counts, and last check timestamp. Sub-10ms response time.',
     inputSchema: {
       type: 'object',
@@ -212,7 +212,7 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulselive_sentry',
+    name: 'pulsetel_sentry',
     description: 'Check Sentry error tracking. Returns unresolved issue counts, top issues by frequency, error level breakdown, affected users, and release attribution. Requires sentry.organization and sentry.project in config, SENTRY_TOKEN env var.',
     inputSchema: {
       type: 'object',
@@ -271,7 +271,7 @@ export class MCPStdioServer {
     });
 
     // Signal ready on stderr (not stdout — stdout is for JSON-RPC)
-    process.stderr.write('PulseLive MCP stdio server ready\n');
+    process.stderr.write('PulseTel MCP stdio server ready\n');
   }
 
   private async handleRequest(request: JSONRPCRequest): Promise<JSONRPCResponse> {
@@ -290,7 +290,7 @@ export class MCPStdioServer {
               }
             },
             serverInfo: {
-              name: 'pulselive',
+              name: 'pulsetel',
               version: VERSION,
               description: 'Real-time project telemetry for AI agents'
             }

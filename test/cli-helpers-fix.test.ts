@@ -217,7 +217,7 @@ describe('cli-helpers fix functions', () => {
       
       expect(mockLog).toHaveBeenCalled();
       const calls = mockLog.mock.calls.map(call => call[0]);
-      expect(calls.some(call => call.includes('PULSELIVE FIX REPORT'))).toBe(true);
+      expect(calls.some(call => call.includes('PULSETEL FIX REPORT'))).toBe(true);
       expect(calls.some(call => call.includes('✅ deps'))).toBe(true);
       expect(calls.some(call => call.includes('Fixed all vulnerabilities'))).toBe(true);
     });

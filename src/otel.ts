@@ -72,7 +72,7 @@ export function initOtel(config: PulseliveConfig): boolean {
 
   // Try to load dependencies
   if (!tryLoadOtelDependencies()) {
-    console.warn('[pulselive-otel] OpenTelemetry dependencies not installed. Install @opentelemetry packages to enable OTel export.');
+    console.warn('[pulsetel-otel] OpenTelemetry dependencies not installed. Install @opentelemetry packages to enable OTel export.');
     return false;
   }
 
@@ -83,7 +83,7 @@ export function initOtel(config: PulseliveConfig): boolean {
 
   try {
     // Create resource with service name
-    const serviceName = otelConfig.service_name || 'pulselive';
+    const serviceName = otelConfig.service_name || 'pulsetel';
     const resource = new otelResources.Resource({
       [otelSemanticConventions.SemanticResourceAttributes.SERVICE_NAME]: serviceName
     });
@@ -113,7 +113,7 @@ export function initOtel(config: PulseliveConfig): boolean {
       });
     } else {
       // File exporter
-      const exportDir = otelConfig.export_dir || path.join(process.cwd(), '.pulselive', 'otel');
+      const exportDir = otelConfig.export_dir || path.join(process.cwd(), '.pulsetel', 'otel');
       
       // Create directory if it doesn't exist
       if (!existsSync(exportDir)) {
@@ -166,7 +166,7 @@ export function initOtel(config: PulseliveConfig): boolean {
     });
     
     // Create meter
-    const meter = meterProvider.getMeter('pulselive');
+    const meter = meterProvider.getMeter('pulsetel');
 
     // Store state
     state.tracerProvider = traceProvider;
@@ -183,7 +183,7 @@ export function initOtel(config: PulseliveConfig): boolean {
 
     return true;
   } catch (error) {
-    console.error('[pulselive-otel] Failed to initialize OpenTelemetry:', error);
+    console.error('[pulsetel-otel] Failed to initialize OpenTelemetry:', error);
     return false;
   }
 }
@@ -196,22 +196,22 @@ export async function withOtelSpan(checkType: string, fn: () => Promise<any>): P
     return fn(); // OTel not initialized, run normally
   }
 
-  const tracer = otelApi.trace.getTracer('pulselive');
+  const tracer = otelApi.trace.getTracer('pulsetel');
   const startTime = Date.now();
 
   try {
-    return await tracer.startActiveSpan(`pulselive.check.${checkType}`, async (span: any) => {
+    return await tracer.startActiveSpan(`pulsetel.check.${checkType}`, async (span: any) => {
       try {
         const result = await fn();
         
         // Set span attributes
         if (result) {
-          span.setAttribute('pulselive.check_type', checkType);
-          span.setAttribute('pulselive.status', result.status || 'unknown');
-          span.setAttribute('pulselive.severity', result.severity || 'unknown');
-          span.setAttribute('pulselive.confidence', result.confidence || 'unknown');
-          span.setAttribute('pulselive.actionable', result.actionable || 'false');
-          span.setAttribute('pulselive.duration_ms', Date.now() - startTime);
+          span.setAttribute('pulsetel.check_type', checkType);
+          span.setAttribute('pulsetel.status', result.status || 'unknown');
+          span.setAttribute('pulsetel.severity', result.severity || 'unknown');
+          span.setAttribute('pulsetel.confidence', result.confidence || 'unknown');
+          span.setAttribute('pulsetel.actionable', result.actionable || 'false');
+          span.setAttribute('pulsetel.duration_ms', Date.now() - startTime);
           
           // Set span status
           if (result.status === 'error') {
@@ -246,27 +246,27 @@ export function exportResults(results: CheckResult[]): void {
 
   try {
     // Create counters and gauges
-    const healthScoreGauge = state.meter.createCounter('pulselive.health.score', {
+    const healthScoreGauge = state.meter.createCounter('pulsetel.health.score', {
       description: 'Health score per check type (0-100)'
     });
     
-    const anomaliesCounter = state.meter.createCounter('pulselive.anomalies.total', {
+    const anomaliesCounter = state.meter.createCounter('pulsetel.anomalies.total', {
       description: 'Total anomalies detected'
     });
     
-    const depsVulnerableCounter = state.meter.createCounter('pulselive.deps.vulnerable', {
+    const depsVulnerableCounter = state.meter.createCounter('pulsetel.deps.vulnerable', {
       description: 'Number of vulnerable dependencies'
     });
     
-    const depsOutdatedCounter = state.meter.createCounter('pulselive.deps.outdated', {
+    const depsOutdatedCounter = state.meter.createCounter('pulsetel.deps.outdated', {
       description: 'Number of outdated dependencies'
     });
     
-    const issuesOpenCounter = state.meter.createCounter('pulselive.issues.open', {
+    const issuesOpenCounter = state.meter.createCounter('pulsetel.issues.open', {
       description: 'Number of open issues'
     });
     
-    const ciFlakinessGauge = state.meter.createCounter('pulselive.ci.flakiness_score', {
+    const ciFlakinessGauge = state.meter.createCounter('pulsetel.ci.flakiness_score', {
       description: 'CI flakiness score'
     });
 
@@ -315,7 +315,7 @@ export function exportResults(results: CheckResult[]): void {
         };
         
         // For now, we'll log to console since we don't have a full logging pipeline
-        console.log('[pulselive-otel-log]', JSON.stringify(logRecord));
+        console.log('[pulsetel-otel-log]', JSON.stringify(logRecord));
       }
     });
 
@@ -324,7 +324,7 @@ export function exportResults(results: CheckResult[]): void {
     anomaliesCounter.add(criticalResults.length);
 
   } catch (error) {
-    console.error('[pulselive-otel] Failed to export results:', error);
+    console.error('[pulsetel-otel] Failed to export results:', error);
   }
 }
 
@@ -363,7 +363,7 @@ export async function shutdownOtel(): Promise<void> {
     state.isInitialized = false;
     
   } catch (error) {
-    console.error('[pulselive-otel] Failed to shutdown OpenTelemetry:', error);
+    console.error('[pulsetel-otel] Failed to shutdown OpenTelemetry:', error);
   }
 }
 

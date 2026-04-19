@@ -159,8 +159,8 @@ describe('CLIHandlers - Core Functionality Tests', () => {
 
       handlers.handleInitCommand();
 
-      expect(mockDeps.writeFile).toHaveBeenCalledWith('.pulselive.yml', expect.any(String));
-      expect(mockDeps.log).toHaveBeenCalledWith('Generated .pulselive.yml configuration file');
+      expect(mockDeps.writeFile).toHaveBeenCalledWith('.pulsetel.yml', expect.any(String));
+      expect(mockDeps.log).toHaveBeenCalledWith('Generated .pulsetel.yml configuration file');
     });
 
     it('should handle yaml module fallback', () => {
@@ -175,7 +175,7 @@ describe('CLIHandlers - Core Functionality Tests', () => {
 
       // Should still work with JSON fallback
       expect(mockDeps.writeFile).toHaveBeenCalled();
-      expect(mockDeps.log).toHaveBeenCalledWith('Generated .pulselive.yml configuration file');
+      expect(mockDeps.log).toHaveBeenCalledWith('Generated .pulsetel.yml configuration file');
 
       // Restore yaml
       if (originalYaml) {
@@ -249,7 +249,7 @@ describe('CLIHandlers - Core Functionality Tests', () => {
       const options = { json: false };
       handlers.handleHistoryCommand(options);
 
-      expect(mockDeps.log).toHaveBeenCalledWith('No history available. Run `pulselive check` first.');
+      expect(mockDeps.log).toHaveBeenCalledWith('No history available. Run `pulsetel check` first.');
     });
   });
 });

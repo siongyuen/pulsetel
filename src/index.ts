@@ -44,7 +44,7 @@ import { CLIHandlers } from './cli-handlers';
 const program = new Command();
 
 program
-  .name('pulselive')
+  .name('pulsetel')
   .description('Real-time project telemetry for AI agents')
   .version(VERSION);
 
@@ -94,7 +94,7 @@ program
 
 program
   .command('init')
-  .description('Generate .pulselive.yml configuration file')
+  .description('Generate .pulsetel.yml configuration file')
   .action(() => {
     cliHandlers.handleInitCommand();
   });
@@ -186,15 +186,15 @@ program
   .command('auth')
   .description('Guide users through GitHub token setup')
   .action(() => {
-    console.log('🔐 PulseLive GitHub Token Setup');
+    console.log('🔐 PulseTel GitHub Token Setup');
     console.log('================================\n');
-    console.log('PulseLive needs a GitHub token to access private repositories and API rate limits.');
+    console.log('PulseTel needs a GitHub token to access private repositories and API rate limits.');
     console.log('');
     console.log('📋 Steps to create a GitHub token:');
     console.log('');
     console.log('1. Go to: https://github.com/settings/tokens');
     console.log('2. Click "Generate new token" → "Generate new token (classic)"');
-    console.log('3. Give your token a descriptive name (e.g., "PulseLive")');
+    console.log('3. Give your token a descriptive name (e.g., "PulseTel")');
     console.log('4. Select these scopes:');
     console.log('   - repo (full control of private repositories)');
     console.log('   - read:org (read org and team membership)');
@@ -215,15 +215,15 @@ program
     console.log('  And add this to your entry file:');
     console.log('  require("dotenv").config();');
     console.log('');
-    console.log('Option 3: Direct in .pulselive.yml (not recommended)');
-    console.log('  Add to your .pulselive.yml:');
+    console.log('Option 3: Direct in .pulsetel.yml (not recommended)');
+    console.log('  Add to your .pulsetel.yml:');
     console.log('  github:');
     console.log('    repo: owner/repo');
     console.log('    token: your_token_here');
     console.log('  ⚠️  Warning: This commits the token to your repo history!');
     console.log('');
     console.log('✅ Verify your token works:');
-    console.log('  Run: pulselive check');
+    console.log('  Run: pulsetel check');
     console.log('  If you see GitHub API data, your token is working!');
     console.log('');
     console.log('🔒 Security reminder:');

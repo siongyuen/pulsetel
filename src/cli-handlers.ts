@@ -183,8 +183,8 @@ export class CLIHandlers {
       }
     };
 
-    this.deps.writeFile('.pulselive.yml', yaml.stringify(defaultConfig));
-    this.deps.log('Generated .pulselive.yml configuration file');
+    this.deps.writeFile('.pulsetel.yml', yaml.stringify(defaultConfig));
+    this.deps.log('Generated .pulsetel.yml configuration file');
     if (detected.github?.repo) {
       this.deps.log(`  Auto-detected GitHub repo: ${detected.github.repo}`);
     }
@@ -192,7 +192,7 @@ export class CLIHandlers {
       this.deps.log('  GitHub token: detected via environment variable (not written to config)');
     }
     this.deps.log('\nConsider adding these to your .gitignore:');
-    this.deps.log('  .pulselive-history/');
+    this.deps.log('  .pulsetel-history/');
     this.deps.log('  coverage/');
   }
 
@@ -208,7 +208,7 @@ export class CLIHandlers {
 
     // Check for insufficient data
     if (history.length < 3) {
-      this.deps.log(`📊 Insufficient data for trend analysis - run \`pulselive check\` a few more times to establish a baseline (currently have ${history.length} data points, need at least 3)`);
+      this.deps.log(`📊 Insufficient data for trend analysis - run \`pulsetel check\` a few more times to establish a baseline (currently have ${history.length} data points, need at least 3)`);
       return;
     }
 
@@ -220,7 +220,7 @@ export class CLIHandlers {
         const trend = trendAnalyzer.analyze(options.type, history, window);
         this.deps.log(JSON.stringify({
           schema_version: "1.0.0",
-          schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+          schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
           version: VERSION,
           timestamp: new Date().toISOString(),
           check_type: options.type,
@@ -237,7 +237,7 @@ export class CLIHandlers {
         }
         this.deps.log(JSON.stringify({
           schema_version: "1.0.0",
-          schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+          schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
           version: VERSION,
           timestamp: new Date().toISOString(),
           trends: allTrends
@@ -288,7 +288,7 @@ export class CLIHandlers {
     if (options.json) {
       this.deps.log(JSON.stringify({
         schema_version: "1.0.0",
-        schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+        schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
         version: VERSION,
         timestamp: new Date().toISOString(),
         anomalies: anomalies
@@ -323,7 +323,7 @@ export class CLIHandlers {
     const history = loadHistory();
 
     if (history.length === 0) {
-      this.deps.log('No history available. Run `pulselive check` first.');
+      this.deps.log('No history available. Run `pulsetel check` first.');
       return;
     }
 
@@ -335,7 +335,7 @@ export class CLIHandlers {
     if (options.json) {
       this.deps.log(JSON.stringify({
         schema_version: "1.0.0",
-        schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+        schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
         version: VERSION,
         timestamp: new Date().toISOString(),
         history: limitedHistory
@@ -343,7 +343,7 @@ export class CLIHandlers {
       return;
     }
 
-    this.deps.log('PULSELIVE HISTORY\n');
+    this.deps.log('PULSETEL HISTORY\n');
     this.deps.log(`Showing last ${limitedHistory.length} runs (of ${history.length} total)\n`);
 
     limitedHistory.forEach((run: any, index: number) => {
@@ -362,8 +362,8 @@ export class CLIHandlers {
   async handleBadgeCommand(dir: string | undefined, options: BadgeCommandOptions): Promise<void> {
     const workingDir = dir || this.deps.cwd();
     const configLoader = this.deps.createConfigLoader
-      ? this.deps.createConfigLoader(dir ? dir + '/.pulselive.yml' : undefined)
-      : (dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader());
+      ? this.deps.createConfigLoader(dir ? dir + '/.pulsetel.yml' : undefined)
+      : (dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader());
     const config = configLoader.autoDetect(workingDir);
     const scanner = this.deps.createScanner
       ? this.deps.createScanner(config, workingDir)
@@ -387,13 +387,13 @@ export class CLIHandlers {
       color = 'yellow';
     }
 
-    const badgeUrl = `https://img.shields.io/badge/pulselive-${status}-${color}`;
-    const markdown = `![pulselive](${badgeUrl})`;
+    const badgeUrl = `https://img.shields.io/badge/pulsetel-${status}-${color}`;
+    const markdown = `![pulsetel](${badgeUrl})`;
 
     if (options.json) {
       this.deps.log(JSON.stringify({
         schema_version: "1.0.0",
-        schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+        schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
         version: VERSION,
         timestamp: new Date().toISOString(),
         status,
@@ -411,7 +411,7 @@ export class CLIHandlers {
    */
   async handleStatusCommand(dir: string | undefined, options: StatusCommandOptions): Promise<void> {
     const workingDir = dir || this.deps.cwd();
-    const historyDir = workingDir + '/.pulselive-history';
+    const historyDir = workingDir + '/.pulsetel-history';
 
     const history = loadHistory(historyDir);
 
@@ -419,14 +419,14 @@ export class CLIHandlers {
       if (options.json) {
         this.deps.log(JSON.stringify({
           schema_version: "1.0.0",
-          schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+          schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
           version: VERSION,
           timestamp: new Date().toISOString(),
           healthy: null,
-          message: "No status history found. Run `pulselive check` first to establish a baseline."
+          message: "No status history found. Run `pulsetel check` first to establish a baseline."
         }, null, 2));
       } else {
-        this.deps.log('No status history found. Run `pulselive check` first to establish a baseline.');
+        this.deps.log('No status history found. Run `pulsetel check` first to establish a baseline.');
       }
       return;
     }
@@ -444,7 +444,7 @@ export class CLIHandlers {
     if (options.json) {
       this.deps.log(JSON.stringify({
         schema_version: "1.0.0",
-        schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+        schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
         version: VERSION,
         timestamp: new Date().toISOString(),
         healthy: healthy,
@@ -466,8 +466,8 @@ export class CLIHandlers {
   async handleReportCommand(dir: string | undefined, options: ReportCommandOptions): Promise<void> {
     const workingDir = dir || this.deps.cwd();
     const configLoader = this.deps.createConfigLoader
-      ? this.deps.createConfigLoader(dir ? dir + '/.pulselive.yml' : undefined)
-      : (dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader());
+      ? this.deps.createConfigLoader(dir ? dir + '/.pulsetel.yml' : undefined)
+      : (dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader());
     const config = configLoader.autoDetect(workingDir);
     const scanner = this.deps.createScanner
       ? this.deps.createScanner(config, workingDir)
@@ -479,7 +479,7 @@ export class CLIHandlers {
 
     if (options.format === 'markdown') {
       // Generate markdown report
-      let report = '# PulseLive Project Health Report\n\n';
+      let report = '# PulseTel Project Health Report\n\n';
 
       // Summary table
       report += '## Summary\n\n';
@@ -548,7 +548,7 @@ export class CLIHandlers {
       }
 
       report += '\n---\n\n';
-      report += `*Generated by PulseLive v${VERSION} on ${new Date().toISOString()}*\n`;
+      report += `*Generated by PulseTel v${VERSION} on ${new Date().toISOString()}*\n`;
 
       this.deps.log(report);
     } else {
@@ -564,12 +564,12 @@ export class CLIHandlers {
     const fs = require('fs');
     const path = require('path');
 
-    this.deps.log('👁️  PulseLive watch mode started - monitoring for file changes');
+    this.deps.log('👁️  PulseTel watch mode started - monitoring for file changes');
     this.deps.log('    Press Ctrl+C to exit\n');
 
     // Initial run
     const workingDir = dir || this.deps.cwd();
-    const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
+    const configLoader = dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader();
     const config = configLoader.autoDetect(workingDir);
     const scanner = new Scanner(config, workingDir);
     const reporter = new Reporter(!options.json);

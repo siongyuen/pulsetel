@@ -79,7 +79,7 @@ export class ConfigLoader {
   private config: PulseliveConfig;
   private deps: ConfigLoaderDeps;
 
-  constructor(configPath: string = '.pulselive.yml', deps: ConfigLoaderDeps = defaultConfigLoaderDeps) {
+  constructor(configPath: string = '.pulsetel.yml', deps: ConfigLoaderDeps = defaultConfigLoaderDeps) {
     this.configPath = configPath;
     this.deps = deps;
     this.config = this.loadConfig();
@@ -88,7 +88,7 @@ export class ConfigLoader {
     const validation = this.validateConfig();
     if (validation.warnings.length > 0) {
       validation.warnings.forEach(warning => {
-        console.error(`[pulselive] Config warning: ${warning}`);
+        console.error(`[pulsetel] Config warning: ${warning}`);
       });
     }
   }

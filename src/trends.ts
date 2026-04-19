@@ -10,7 +10,7 @@ export interface HistoryEntry {
     metrics?: any;
   }>;
   hostname?: string;
-  pulselive_version?: string;
+  pulsetel_version?: string;
 }
 
 export interface TrendResult {

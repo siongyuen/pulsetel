@@ -7,18 +7,18 @@ import { CheckResult } from './scanner';
 import { HistoryEntry, TrendAnalyzer } from './trends';
 
 const VALID_TOOLS = [
-  'pulselive_check',
-  'pulselive_quick',
-  'pulselive_ci',
-  'pulselive_health',
-  'pulselive_deps',
-  'pulselive_summary',
-  'pulselive_trends',
-  'pulselive_anomalies',
-  'pulselive_metrics',
-  'pulselive_recommend',
-  'pulselive_status',
-  'pulselive_sentry'
+  'pulsetel_check',
+  'pulsetel_quick',
+  'pulsetel_ci',
+  'pulsetel_health',
+  'pulsetel_deps',
+  'pulsetel_summary',
+  'pulsetel_trends',
+  'pulsetel_anomalies',
+  'pulsetel_metrics',
+  'pulsetel_recommend',
+  'pulsetel_status',
+  'pulsetel_sentry'
 ];
 
 export { VALID_TOOLS };
@@ -51,18 +51,18 @@ export function validateDir(dir: string, projectRoot: string = process.cwd()): s
 
 export function getRequiredParamsForTool(tool: string): string[] {
   const toolParams: Record<string, string[]> = {
-    'pulselive_check': ['dir'],
-    'pulselive_quick': ['dir'],
-    'pulselive_ci': ['dir'],
-    'pulselive_health': ['dir'],
-    'pulselive_deps': ['dir'],
-    'pulselive_summary': ['dir'],
-    'pulselive_recommend': ['dir'],
-    'pulselive_trends': [],
-    'pulselive_anomalies': [],
-    'pulselive_metrics': [],
-    'pulselive_status': [],
-    'pulselive_sentry': []
+    'pulsetel_check': ['dir'],
+    'pulsetel_quick': ['dir'],
+    'pulsetel_ci': ['dir'],
+    'pulsetel_health': ['dir'],
+    'pulsetel_deps': ['dir'],
+    'pulsetel_summary': ['dir'],
+    'pulsetel_recommend': ['dir'],
+    'pulsetel_trends': [],
+    'pulsetel_anomalies': [],
+    'pulsetel_metrics': [],
+    'pulsetel_status': [],
+    'pulsetel_sentry': []
   };
 
   return toolParams[tool] || [];

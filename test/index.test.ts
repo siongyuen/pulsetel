@@ -37,7 +37,7 @@ describe('CLI entry point', () => {
 
   describe('check command', () => {
     it('runs checks and outputs results', () => {
-      const tmpDir = '/tmp/pulselive-check-test';
+      const tmpDir = '/tmp/pulsetel-check-test';
       mkdirSync(tmpDir, { recursive: true });
       const result = execFileSync('node', [cliPath, 'check', '--json'], {
         encoding: 'utf8',
@@ -55,16 +55,16 @@ describe('CLI entry point', () => {
   });
 
   describe('init command', () => {
-    it('creates .pulselive.yml', () => {
-      const tmpDir = '/tmp/pulselive-init-test';
+    it('creates .pulsetel.yml', () => {
+      const tmpDir = '/tmp/pulsetel-init-test';
       mkdirSync(tmpDir, { recursive: true });
       execFileSync('node', [cliPath, 'init'], {
         encoding: 'utf8',
         cwd: tmpDir,
         timeout: 10000,
       });
-      expect(existsSync(path.join(tmpDir, '.pulselive.yml'))).toBe(true);
-      const content = readFileSync(path.join(tmpDir, '.pulselive.yml'), 'utf8');
+      expect(existsSync(path.join(tmpDir, '.pulsetel.yml'))).toBe(true);
+      const content = readFileSync(path.join(tmpDir, '.pulsetel.yml'), 'utf8');
       expect(content).toContain('github');
       rmSync(tmpDir, { recursive: true, force: true });
     });
@@ -72,7 +72,7 @@ describe('CLI entry point', () => {
 
   describe('history command', () => {
     it('runs without error when no history exists', () => {
-      const tmpDir = '/tmp/pulselive-history-test';
+      const tmpDir = '/tmp/pulsetel-history-test';
       mkdirSync(tmpDir, { recursive: true });
       const result = execFileSync('node', [cliPath, 'history'], {
         encoding: 'utf8',
@@ -86,7 +86,7 @@ describe('CLI entry point', () => {
 
   describe('trends command', () => {
     it('runs without error when no history exists', () => {
-      const tmpDir = '/tmp/pulselive-trends-test';
+      const tmpDir = '/tmp/pulsetel-trends-test';
       mkdirSync(tmpDir, { recursive: true });
       const result = execFileSync('node', [cliPath, 'trends'], {
         encoding: 'utf8',
@@ -100,7 +100,7 @@ describe('CLI entry point', () => {
 
   describe('anomalies command', () => {
     it('runs without error when no history exists', () => {
-      const tmpDir = '/tmp/pulselive-anomalies-test';
+      const tmpDir = '/tmp/pulsetel-anomalies-test';
       mkdirSync(tmpDir, { recursive: true });
       const result = execFileSync('node', [cliPath, 'anomalies'], {
         encoding: 'utf8',

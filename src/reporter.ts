@@ -21,7 +21,7 @@ export class Reporter {
   }
 
   formatVerbose(results: CheckResult[]): string {
-    let output = 'PULSELIVE \u2014 your project, right now (verbose)\n\n';
+    let output = 'PULSETEL \u2014 your project, right now (verbose)\n\n';
 
     for (const result of results) {
       const statusIcon = this.getStatusIcon(result.status);
@@ -42,13 +42,13 @@ export class Reporter {
   formatJunit(results: CheckResult[]): string {
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<testsuites>\n';
-    xml += '  <testsuite name="pulselive" tests="' + results.length + '">\n';
+    xml += '  <testsuite name="pulsetel" tests="' + results.length + '">\n';
     
     for (const result of results) {
       const status = result.status;
       const isFailure = status === 'error';
       
-      xml += '    <testcase name="' + this.escapeXml(result.type) + '" classname="pulselive.' + result.type + '">';
+      xml += '    <testcase name="' + this.escapeXml(result.type) + '" classname="pulsetel.' + result.type + '">';
       
       if (isFailure) {
         xml += '\n      <failure message="' + this.escapeXml(result.message) + '">';
@@ -74,7 +74,7 @@ export class Reporter {
   }
 
   private formatColored(results: CheckResult[]): string {
-    let output = chalk.bold('PULSELIVE — your project, right now') + '\n\n';
+    let output = chalk.bold('PULSETEL — your project, right now') + '\n\n';
 
     const groupedResults = this.groupResults(results);
 
@@ -99,7 +99,7 @@ const header = this.getHeader(type);
   }
 
   private formatPlain(results: CheckResult[]): string {
-    let output = 'PULSELIVE — your project, right now\n\n';
+    let output = 'PULSETEL — your project, right now\n\n';
 
     const groupedResults = this.groupResults(results);
 

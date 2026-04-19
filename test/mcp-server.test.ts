@@ -62,113 +62,113 @@ describe('MCPServer — Tool Handler Tests', () => {
   });
 
   describe('handleToolRequest', () => {
-    it('handles pulselive_check', async () => {
+    it('handles pulsetel_check', async () => {
       mockDeps = makeMockDeps([
         { type: 'ci', status: 'success', message: 'CI passing' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_check');
+      const result = await server.handleToolRequest('pulsetel_check');
       expect(result.schema_version).toBe('1.0.0');
       expect(result.results).toBeDefined();
       expect(Array.isArray(result.results)).toBe(true);
     });
 
-    it('handles pulselive_quick', async () => {
+    it('handles pulsetel_quick', async () => {
       mockDeps = makeMockDeps([
         { type: 'ci', status: 'success', message: 'CI passing' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_quick');
+      const result = await server.handleToolRequest('pulsetel_quick');
       expect(result.schema_version).toBe('1.0.0');
       expect(result.quick).toBe(true);
     });
 
-    it('handles pulselive_ci', async () => {
+    it('handles pulsetel_ci', async () => {
       mockDeps = makeMockDeps([
         { type: 'ci', status: 'success', message: 'CI passing' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_ci');
+      const result = await server.handleToolRequest('pulsetel_ci');
       expect(result.schema_version).toBe('1.0.0');
       expect(result.type).toBe('ci');
     });
 
-    it('handles pulselive_health', async () => {
+    it('handles pulsetel_health', async () => {
       mockDeps = makeMockDeps([
         { type: 'health', status: 'success', message: 'All healthy' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_health');
+      const result = await server.handleToolRequest('pulsetel_health');
       expect(result.schema_version).toBe('1.0.0');
     });
 
-    it('handles pulselive_deps', async () => {
+    it('handles pulsetel_deps', async () => {
       mockDeps = makeMockDeps([
         { type: 'deps', status: 'warning', message: 'Outdated' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_deps');
+      const result = await server.handleToolRequest('pulsetel_deps');
       expect(result.schema_version).toBe('1.0.0');
     });
 
-    it('handles pulselive_summary', async () => {
+    it('handles pulsetel_summary', async () => {
       mockDeps = makeMockDeps([
         { type: 'ci', status: 'success', message: 'CI passing' },
         { type: 'deps', status: 'success', message: 'Deps OK' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_summary');
+      const result = await server.handleToolRequest('pulsetel_summary');
       expect(result.schema_version).toBe('1.0.0');
     });
 
-    it('handles pulselive_trends', async () => {
+    it('handles pulsetel_trends', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_trends');
+      const result = await server.handleToolRequest('pulsetel_trends');
       expect(result.available).toBe(true);
       expect(result.trends).toBeDefined();
     });
 
-    it('handles pulselive_trends with checkType', async () => {
+    it('handles pulsetel_trends with checkType', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_trends', undefined, { checkType: 'ci' });
+      const result = await server.handleToolRequest('pulsetel_trends', undefined, { checkType: 'ci' });
       expect(result.available).toBe(true);
     });
 
-    it('handles pulselive_anomalies', async () => {
+    it('handles pulsetel_anomalies', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_anomalies');
+      const result = await server.handleToolRequest('pulsetel_anomalies');
       expect(result.available).toBe(true);
       expect(Array.isArray(result.anomalies)).toBe(true);
     });
 
-    it('handles pulselive_metrics', async () => {
+    it('handles pulsetel_metrics', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_metrics');
+      const result = await server.handleToolRequest('pulsetel_metrics');
       expect(result.available).toBe(true);
     });
 
-    it('handles pulselive_telemetry summary format', async () => {
+    it('handles pulsetel_telemetry summary format', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_telemetry', undefined, { format: 'summary' });
+      const result = await server.handleToolRequest('pulsetel_telemetry', undefined, { format: 'summary' });
       expect(result.schema_version).toBe('1.0.0');
       expect(result.otel_available).toBeDefined();
     });
 
-    it('handles pulselive_telemetry full format', async () => {
+    it('handles pulsetel_telemetry full format', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_telemetry', undefined, { format: 'full' });
+      const result = await server.handleToolRequest('pulsetel_telemetry', undefined, { format: 'full' });
       expect(result.schema_version).toBe('1.0.0');
       expect(result.otel).toBeDefined();
     });
@@ -179,13 +179,13 @@ describe('MCPServer — Tool Handler Tests', () => {
       await expect(server.handleToolRequest('unknown_tool')).rejects.toThrow('Unknown tool');
     });
 
-    it('handles pulselive_check with includeTrends', async () => {
+    it('handles pulsetel_check with includeTrends', async () => {
       mockDeps = makeMockDeps([
         { type: 'ci', status: 'success', message: 'CI passing' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_check', undefined, { includeTrends: true });
+      const result = await server.handleToolRequest('pulsetel_check', undefined, { includeTrends: true });
       expect(result.schema_version).toBe('1.0.0');
       // Trends should be included when history is available
       if (result.trends) {
@@ -194,41 +194,41 @@ describe('MCPServer — Tool Handler Tests', () => {
     });
   });
 
-  describe('pulselive_trends edge cases', () => {
+  describe('pulsetel_trends edge cases', () => {
     it('returns no_history when empty', async () => {
       vi.spyOn(MCPServer.prototype as any, 'loadHistory').mockReturnValue([]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_trends');
+      const result = await server.handleToolRequest('pulsetel_trends');
       expect(result.available).toBe(false);
       expect(result.reason).toBe('no_history');
     });
   });
 
-  describe('pulselive_anomalies edge cases', () => {
+  describe('pulsetel_anomalies edge cases', () => {
     it('returns empty when no history', async () => {
       vi.spyOn(MCPServer.prototype as any, 'loadHistory').mockReturnValue([]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_anomalies');
+      const result = await server.handleToolRequest('pulsetel_anomalies');
       expect(result.available).toBe(false);
       expect(result.anomalies).toEqual([]);
     });
   });
 
-  describe('pulselive_metrics edge cases', () => {
+  describe('pulsetel_metrics edge cases', () => {
     it('returns unavailable when no history', async () => {
       vi.spyOn(MCPServer.prototype as any, 'loadHistory').mockReturnValue([]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_metrics');
+      const result = await server.handleToolRequest('pulsetel_metrics');
       expect(result.available).toBe(false);
     });
 
     it('returns metrics for specific check type', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_metrics', undefined, { checkType: 'ci' });
+      const result = await server.handleToolRequest('pulsetel_metrics', undefined, { checkType: 'ci' });
       expect(result.available).toBe(true);
       expect(result.checkType).toBe('ci');
     });
@@ -246,24 +246,24 @@ describe('MCPServer — Tool Handler Tests', () => {
     });
   });
 
-  describe('pulselive_status', () => {
+  describe('pulsetel_status', () => {
     it('returns healthy null when no history', async () => {
       vi.spyOn(MCPServer.prototype as any, 'loadHistory').mockReturnValue([]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_status');
+      const result = await server.handleToolRequest('pulsetel_status');
       expect(result.healthy).toBeNull();
     });
 
     it('returns healthy true when no errors', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_status');
+      const result = await server.handleToolRequest('pulsetel_status');
       expect(result.healthy).toBe(true);
     });
   });
 
-  describe('pulselive_recommend', () => {
+  describe('pulsetel_recommend', () => {
     it('returns recommendations ranked by severity', async () => {
       mockDeps = makeMockDeps([
         { type: 'ci', status: 'warning', message: 'Flaky CI' },
@@ -272,7 +272,7 @@ describe('MCPServer — Tool Handler Tests', () => {
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_recommend');
+      const result = await server.handleToolRequest('pulsetel_recommend');
       expect(result.recommendations).toBeDefined();
       expect(Array.isArray(result.recommendations)).toBe(true);
       expect(result.totalRecommendations).toBeDefined();
@@ -285,7 +285,7 @@ describe('MCPServer — Tool Handler Tests', () => {
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_recommend');
+      const result = await server.handleToolRequest('pulsetel_recommend');
       expect(result.recommendations).toBeDefined();
     });
   });
@@ -304,39 +304,39 @@ describe('MCPServer — Tool Handler Tests', () => {
     });
   });
 
-  describe('pulselive_trends edge cases', () => {
+  describe('pulsetel_trends edge cases', () => {
     it('handles trends with no history', async () => {
       vi.spyOn(MCPServer.prototype as any, 'loadHistory').mockReturnValue([]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_trends');
+      const result = await server.handleToolRequest('pulsetel_trends');
       expect(result.available).toBe(false);
     });
   });
 
-  describe('pulselive_metrics with checkType', () => {
+  describe('pulsetel_metrics with checkType', () => {
     it('returns metrics for specific check type', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_metrics', undefined, { checkType: 'ci' });
+      const result = await server.handleToolRequest('pulsetel_metrics', undefined, { checkType: 'ci' });
       expect(result.available).toBe(true);
       expect(result.checkType).toBe('ci');
     });
   });
 
-  describe('pulselive_multi_repo', () => {
+  describe('pulsetel_multi_repo', () => {
     it('requires repos parameter', async () => {
       server = new MCPServer(configLoader, 3000, mockDeps);
-      await expect(server.handleToolRequest('pulselive_multi_repo')).rejects.toThrow('Missing required parameter');
+      await expect(server.handleToolRequest('pulsetel_multi_repo')).rejects.toThrow('Missing required parameter');
     });
 
-    it('handles pulselive_check with repos', async () => {
+    it('handles pulsetel_check with repos', async () => {
       mockDeps = makeMockDeps([
         { type: 'ci', status: 'success', message: 'OK' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulselive_check', undefined, { repos: 'org/repo1,org/repo2' });
+      const result = await server.handleToolRequest('pulsetel_check', undefined, { repos: 'org/repo1,org/repo2' });
       expect(result.schema_version).toBe('1.0.0');
       expect(result.repos).toBeDefined();
     });
@@ -358,7 +358,7 @@ describe('MCPServer — Tool Handler Tests', () => {
       };
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      await expect(server.handleToolRequest('pulselive_check')).rejects.toThrow();
+      await expect(server.handleToolRequest('pulsetel_check')).rejects.toThrow();
     });
   });
 });

@@ -381,7 +381,7 @@ export function computeMultiRepoSummary(results: Array<{ repo: string; results: 
 
 // ── History I/O (has side effects but is still useful to test) ──
 
-export function loadHistory(historyDir: string = '.pulselive-history'): HistoryEntry[] {
+export function loadHistory(historyDir: string = '.pulsetel-history'): HistoryEntry[] {
   try {
     if (!existsSync(historyDir)) {
       return [];
@@ -406,7 +406,7 @@ export function loadHistory(historyDir: string = '.pulselive-history'): HistoryE
 
 export function saveHistory(results: CheckResult[]): void {
   try {
-    const historyDir = '.pulselive-history';
+    const historyDir = '.pulsetel-history';
 
     if (!existsSync(historyDir)) {
       mkdirSync(historyDir, { recursive: true });
@@ -415,7 +415,7 @@ export function saveHistory(results: CheckResult[]): void {
     const historyEntry: HistoryEntry = {
       timestamp: new Date().toISOString(),
       hostname: os.hostname(),
-      pulselive_version: VERSION,
+      pulsetel_version: VERSION,
       results: results.map((result: CheckResult) => ({
         type: result.type,
         status: result.status,
@@ -640,7 +640,7 @@ export async function runSingleRepoCheck(
 ): Promise<{ results: CheckResult[]; duration: number; config: PulseliveConfig; workingDir: string }> {
   const startTime = Date.now();
   const workingDir = dir || deps.cwd();
-  const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
+  const configLoader = dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader();
   
   // Handle OTel flag - override config if --otel is specified
   let config = configLoader.autoDetect(workingDir);
@@ -673,7 +673,7 @@ export function formatCheckOutput(
   if (options.json) {
     const output: any = {
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       duration: duration,
@@ -765,7 +765,7 @@ export async function runFixCommand(
   deps: CLIDeps = defaultCLIDeps
 ): Promise<{ results: FixResult[]; duration: number }> {
   const workingDir = dir || deps.cwd();
-  const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
+  const configLoader = dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader();
   const config = configLoader.autoDetect(workingDir);
   
   const startTime = Date.now();
@@ -791,14 +791,14 @@ export function formatFixOutput(
   if (options.json) {
     deps.log(JSON.stringify({
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       duration: duration,
       fix_results: results
     }, null, 2));
   } else {
-    deps.log('🔧 PULSELIVE FIX REPORT');
+    deps.log('🔧 PULSETEL FIX REPORT');
     deps.log('=======================\n');
     
     results.forEach((result, index) => {
@@ -853,7 +853,7 @@ export async function runQuickCheck(
   
   const startTime = Date.now();
   const workingDir = dir || deps.cwd();
-  const configLoader = dir ? new ConfigLoader(dir + '/.pulselive.yml') : new ConfigLoader();
+  const configLoader = dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader();
   
   // Handle OTel flag - override config if --otel is specified
   let config = configLoader.autoDetect(workingDir);
@@ -887,7 +887,7 @@ export function formatQuickOutput(
   if (options.json) {
     deps.log(JSON.stringify({
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       quick: true,
@@ -984,7 +984,7 @@ export async function handleMultiRepoCheck(reposString: string, options: { json?
     
     deps.log(JSON.stringify({
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       duration: totalDuration,

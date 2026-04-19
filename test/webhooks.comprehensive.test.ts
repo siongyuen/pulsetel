@@ -23,7 +23,7 @@ describe('WebhookNotifier — Comprehensive Tests', () => {
   // ── HMAC Signing ──
 
   describe('HMAC signing', () => {
-    it('sends X-PulseLive-Signature header when secret is configured', async () => {
+    it('sends X-PulseTel-Signature header when secret is configured', async () => {
       mockDeps.fetch.mockResolvedValue({ ok: true, status: 200 });
       const notifier = new WebhookNotifier(mockConfig([
         { url: 'https://example.com/hook', events: ['critical'], secret: 'my-secret' }
@@ -34,7 +34,7 @@ describe('WebhookNotifier — Comprehensive Tests', () => {
       expect(mockDeps.fetch).toHaveBeenCalled();
       const call = mockDeps.fetch.mock.calls[0];
       const headers = call[1]?.headers || {};
-      expect(headers['X-PulseLive-Signature']).toMatch(/^sha256=[a-f0-9]{64}$/);
+      expect(headers['X-PulseTel-Signature']).toMatch(/^sha256=[a-f0-9]{64}$/);
     });
 
     it('produces correct HMAC for known input', () => {
@@ -54,7 +54,7 @@ describe('WebhookNotifier — Comprehensive Tests', () => {
 
       const call = mockDeps.fetch.mock.calls[0];
       const headers = call[1]?.headers || {};
-      expect(headers['X-PulseLive-Signature']).toBeUndefined();
+      expect(headers['X-PulseTel-Signature']).toBeUndefined();
     });
   });
 
@@ -200,7 +200,7 @@ describe('WebhookNotifier — Comprehensive Tests', () => {
 
       await notifier.notify([{ type: 'ci', status: 'error', message: 'CI failed' }] as any);
 
-      expect(mockDeps.existsSync).toHaveBeenCalledWith('.pulselive-history');
+      expect(mockDeps.existsSync).toHaveBeenCalledWith('.pulsetel-history');
     });
 
     it('returns empty history when dir does not exist', async () => {
@@ -259,7 +259,7 @@ describe('WebhookNotifier — Comprehensive Tests', () => {
 
       const call = mockDeps.fetch.mock.calls[0];
       expect(call[1].headers['Content-Type']).toBe('application/json');
-      expect(call[1].headers['X-PulseLive-Event']).toBe('critical');
+      expect(call[1].headers['X-PulseTel-Event']).toBe('critical');
       expect(call[1].method).toBe('POST');
     });
 

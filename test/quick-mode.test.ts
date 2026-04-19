@@ -21,8 +21,12 @@ describe('Quick mode', () => {
       const results = await scanner.runQuickChecks();
       const types = results.map(r => r.type);
 
-      // deps should always be skipped with a warning placeholder
-      expect(types).not.toContain('deps');
+      // deps should appear as a skipped placeholder, not a real check result
+      const depsResult = results.find(r => r.type === 'deps');
+      if (depsResult) {
+        expect(depsResult.status).toBe('warning');
+        expect(depsResult.message).toContain('skipped in quick mode');
+      }
 
       // Skipped checks should appear as warnings
       const skipped = results.filter(r => r.status === 'warning' && r.message.includes('skipped in quick mode'));
@@ -53,10 +57,10 @@ describe('Quick mode', () => {
     });
   });
 
-  describe('MCP pulselive_quick tool', () => {
-    it('handleToolRequest dispatches pulselive_quick', async () => {
+  describe('MCP pulsetel_quick tool', () => {
+    it('handleToolRequest dispatches pulsetel_quick', async () => {
       const server = new MCPServer(new ConfigLoader());
-      const result = await (server as any).handleToolRequest('pulselive_quick', undefined, {});
+      const result = await (server as any).handleToolRequest('pulsetel_quick', undefined, {});
       expect(result).toBeDefined();
       expect(result.quick).toBe(true);
       expect(result.results).toBeDefined();
@@ -65,27 +69,27 @@ describe('Quick mode', () => {
 
     it('quick response includes duration', async () => {
       const server = new MCPServer(new ConfigLoader());
-      const result = await (server as any).handleToolRequest('pulselive_quick', undefined, {});
+      const result = await (server as any).handleToolRequest('pulsetel_quick', undefined, {});
       expect(result.duration).toBeDefined();
       expect(typeof result.duration).toBe('number');
     });
 
-    it('pulselive_quick is in VALID_TOOLS', async () => {
+    it('pulsetel_quick is in VALID_TOOLS', async () => {
       const server = new MCPServer(new ConfigLoader());
-      // Should not throw for pulselive_quick
-      const result = await (server as any).handleToolRequest('pulselive_quick', undefined, {});
+      // Should not throw for pulsetel_quick
+      const result = await (server as any).handleToolRequest('pulsetel_quick', undefined, {});
       expect(result).toBeDefined();
     });
   });
 
   describe('CLI --quick flag and quick command', () => {
-    it('pulselive check --quick is a valid option', () => {
+    it('pulsetel check --quick is a valid option', () => {
       const cliPath = path.resolve(__dirname, '../dist/index.js');
       const result = execFileSync('node', [cliPath, 'check', '--help'], { encoding: 'utf8' });
       expect(result).toContain('--quick');
     });
 
-    it('pulselive quick command exists', () => {
+    it('pulsetel quick command exists', () => {
       const cliPath = path.resolve(__dirname, '../dist/index.js');
       const result = execFileSync('node', [cliPath, '--help'], { encoding: 'utf8' });
       expect(result).toContain('quick');

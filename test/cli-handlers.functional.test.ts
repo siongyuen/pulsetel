@@ -79,19 +79,19 @@ describe('CLIHandlers — Functional Tests', () => {
   // ── handleInitCommand ──
 
   describe('handleInitCommand', () => {
-    it('writes .pulselive.yml file', () => {
+    it('writes .pulsetel.yml file', () => {
       handlers.handleInitCommand();
-      expect(mockDeps.writeFile).toHaveBeenCalledWith('.pulselive.yml', expect.any(String));
+      expect(mockDeps.writeFile).toHaveBeenCalledWith('.pulsetel.yml', expect.any(String));
     });
 
     it('logs generation confirmation', () => {
       handlers.handleInitCommand();
-      expect(mockDeps.log).toHaveBeenCalledWith('Generated .pulselive.yml configuration file');
+      expect(mockDeps.log).toHaveBeenCalledWith('Generated .pulsetel.yml configuration file');
     });
 
     it('logs gitignore suggestions', () => {
       handlers.handleInitCommand();
-      expect(mockDeps.log).toHaveBeenCalledWith('  .pulselive-history/');
+      expect(mockDeps.log).toHaveBeenCalledWith('  .pulsetel-history/');
       expect(mockDeps.log).toHaveBeenCalledWith('  coverage/');
     });
 
@@ -109,7 +109,7 @@ describe('CLIHandlers — Functional Tests', () => {
       vi.spyOn(cliHelpers, 'loadHistory').mockReturnValue([]);
 
       handlers.handleHistoryCommand({ json: false });
-      expect(mockDeps.log).toHaveBeenCalledWith('No history available. Run `pulselive check` first.');
+      expect(mockDeps.log).toHaveBeenCalledWith('No history available. Run `pulsetel check` first.');
     });
 
     it('shows history entries in text mode', () => {
@@ -117,7 +117,7 @@ describe('CLIHandlers — Functional Tests', () => {
       vi.spyOn(cliHelpers, 'loadHistory').mockReturnValue(history);
 
       handlers.handleHistoryCommand({ json: false, limit: '10' });
-      expect(mockDeps.log).toHaveBeenCalledWith('PULSELIVE HISTORY\n');
+      expect(mockDeps.log).toHaveBeenCalledWith('PULSETEL HISTORY\n');
       expect(mockDeps.log).toHaveBeenCalledWith(expect.stringContaining('Showing last 3 runs'));
     });
 
@@ -294,7 +294,7 @@ describe('CLIHandlers — Functional Tests', () => {
   describe('handleReportCommand', () => {
     it('outputs markdown report', async () => {
       await handlers.handleReportCommand('/test', { format: 'markdown' });
-      expect(mockDeps.log).toHaveBeenCalledWith(expect.stringContaining('# PulseLive Project Health Report'));
+      expect(mockDeps.log).toHaveBeenCalledWith(expect.stringContaining('# PulseTel Project Health Report'));
     });
 
     it('includes summary table in markdown', async () => {
@@ -330,7 +330,7 @@ describe('CLIHandlers — Functional Tests', () => {
       vi.spyOn(cliHelpers, 'loadHistory').mockReturnValue([]);
 
       await handlers.handleStatusCommand(undefined, { json: false });
-      expect(mockDeps.log).toHaveBeenCalledWith('No status history found. Run `pulselive check` first to establish a baseline.');
+      expect(mockDeps.log).toHaveBeenCalledWith('No status history found. Run `pulsetel check` first to establish a baseline.');
     });
 
     it('shows no history in JSON mode with healthy null', async () => {

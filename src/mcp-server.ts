@@ -43,7 +43,7 @@ export class MCPServer {
   private getScanner(dir?: string): Scanner {
     if (dir) {
       const safeDir = this.validateDir(dir);
-      const dirConfigLoader = this.mcpDeps.createConfigLoader(safeDir + '/.pulselive.yml');
+      const dirConfigLoader = this.mcpDeps.createConfigLoader(safeDir + '/.pulsetel.yml');
       const config = dirConfigLoader.autoDetect();
       return this.mcpDeps.createScanner(config, dir);
     }
@@ -192,7 +192,7 @@ export class MCPServer {
 
     this.server.listen(portToTry, () => {
       const address = this.server?.address() as AddressInfo;
-      console.log(`PulseLive MCP Server v${VERSION} on port ${address.port}`);
+      console.log(`PulseTel MCP Server v${VERSION} on port ${address.port}`);
     });
   }
 
@@ -215,41 +215,41 @@ export class MCPServer {
     const trendAnalyzer = new TrendAnalyzer();
 
     switch (tool) {
-      case 'pulselive_check':
+      case 'pulsetel_check':
         if (params?.repos) {
-          return this.pulseliveMultiRepoCheck(params.repos, false, params.includeTrends);
+          return this.pulsetelMultiRepoCheck(params.repos, false, params.includeTrends);
         }
-        return this.pulseliveCheck(scanner, history, trendAnalyzer, params?.includeTrends);
-      case 'pulselive_quick':
+        return this.pulsetelCheck(scanner, history, trendAnalyzer, params?.includeTrends);
+      case 'pulsetel_quick':
         if (params?.repos) {
-          return this.pulseliveMultiRepoCheck(params.repos, true, false);
+          return this.pulsetelMultiRepoCheck(params.repos, true, false);
         }
-        return this.pulseliveQuick(scanner, history, trendAnalyzer);
-      case 'pulselive_ci':
-        return this.pulseliveSingle(scanner, 'ci', history, trendAnalyzer);
-      case 'pulselive_health':
-        return this.pulseliveSingle(scanner, 'health', history, trendAnalyzer);
-      case 'pulselive_deps':
-        return this.pulseliveSingle(scanner, 'deps', history, trendAnalyzer);
-      case 'pulselive_summary':
-        return this.pulseliveSummary(scanner, history, trendAnalyzer);
-      case 'pulselive_trends':
-        return this.pulseliveTrends(history, trendAnalyzer, params?.checkType, params?.window);
-      case 'pulselive_anomalies':
-        return this.pulseliveAnomalies(history, trendAnalyzer);
-      case 'pulselive_metrics':
-        return this.pulseliveMetrics(history, trendAnalyzer, params?.checkType);
-      case 'pulselive_telemetry':
-        return this.pulseliveTelemetry(params?.format);
-      case 'pulselive_status':
-        return this.pulseliveStatus();
-      case 'pulselive_recommend':
-        return this.pulseliveRecommend(scanner, history, trendAnalyzer);
-      case 'pulselive_sentry':
-        return this.pulseliveSentry(scanner);
-      case 'pulselive_multi_repo':
+        return this.pulsetelQuick(scanner, history, trendAnalyzer);
+      case 'pulsetel_ci':
+        return this.pulsetelSingle(scanner, 'ci', history, trendAnalyzer);
+      case 'pulsetel_health':
+        return this.pulsetelSingle(scanner, 'health', history, trendAnalyzer);
+      case 'pulsetel_deps':
+        return this.pulsetelSingle(scanner, 'deps', history, trendAnalyzer);
+      case 'pulsetel_summary':
+        return this.pulsetelSummary(scanner, history, trendAnalyzer);
+      case 'pulsetel_trends':
+        return this.pulsetelTrends(history, trendAnalyzer, params?.checkType, params?.window);
+      case 'pulsetel_anomalies':
+        return this.pulsetelAnomalies(history, trendAnalyzer);
+      case 'pulsetel_metrics':
+        return this.pulsetelMetrics(history, trendAnalyzer, params?.checkType);
+      case 'pulsetel_telemetry':
+        return this.pulsetelTelemetry(params?.format);
+      case 'pulsetel_status':
+        return this.pulsetelStatus();
+      case 'pulsetel_recommend':
+        return this.pulsetelRecommend(scanner, history, trendAnalyzer);
+      case 'pulsetel_sentry':
+        return this.pulsetelSentry(scanner);
+      case 'pulsetel_multi_repo':
         if (params?.repos) {
-          return this.pulseliveMultiRepoCheck(params.repos, false, params?.includeTrends);
+          return this.pulsetelMultiRepoCheck(params.repos, false, params?.includeTrends);
         }
         throw new Error('Missing required parameter: repos');
       default:
@@ -259,7 +259,7 @@ export class MCPServer {
 
   // ── Tool Implementations (agent-first: structured, actionable, severity, context) ──
 
-  private async pulseliveCheck(
+  private async pulsetelCheck(
     scanner: Scanner,
     history: HistoryEntry[],
     trendAnalyzer: TrendAnalyzer,
@@ -270,7 +270,7 @@ export class MCPServer {
 
     const response: any = {
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       results: items,
@@ -297,7 +297,7 @@ export class MCPServer {
    * Returns in ~1-2s instead of ~8-12s for full check.
    * Skipped checks are included as warning placeholders.
    */
-  private async pulseliveQuick(
+  private async pulsetelQuick(
     scanner: Scanner,
     history: HistoryEntry[],
     trendAnalyzer: TrendAnalyzer
@@ -308,7 +308,7 @@ export class MCPServer {
 
     const response: any = {
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       quick: true,
@@ -316,7 +316,7 @@ export class MCPServer {
       results: items,
       summary: {
         ...this.computeSummary(results),
-        note: 'Quick mode — deps and coverage skipped for speed. Run pulselive_check for full results.'
+        note: 'Quick mode — deps and coverage skipped for speed. Run pulsetel_check for full results.'
       }
     };
 
@@ -335,7 +335,7 @@ export class MCPServer {
     return response;
   }
 
-  private async pulseliveSingle(
+  private async pulsetelSingle(
     scanner: Scanner,
     type: string,
     history: HistoryEntry[],
@@ -352,12 +352,12 @@ export class MCPServer {
 
     return {
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       ...enriched
     };
   }
 
-  private async pulseliveSummary(
+  private async pulsetelSummary(
     scanner: Scanner,
     history: HistoryEntry[],
     trendAnalyzer: TrendAnalyzer
@@ -374,21 +374,21 @@ export class MCPServer {
 
     return {
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       ...summary
     };
   }
 
-  private pulseliveTrends(
+  private pulsetelTrends(
     history: HistoryEntry[],
     trendAnalyzer: TrendAnalyzer,
     checkType?: string,
     window: number = 7
   ): any {
     if (history.length === 0) {
-      return { available: false, reason: 'no_history', actionable: 'Run pulselive check to build history' };
+      return { available: false, reason: 'no_history', actionable: 'Run pulsetel check to build history' };
     }
 
     if (checkType) {
@@ -416,9 +416,9 @@ export class MCPServer {
     return { available: true, window, trends };
   }
 
-  private pulseliveAnomalies(history: HistoryEntry[], trendAnalyzer: TrendAnalyzer): any {
+  private pulsetelAnomalies(history: HistoryEntry[], trendAnalyzer: TrendAnalyzer): any {
     if (history.length === 0) {
-      return { available: false, anomalies: [], actionable: 'Run pulselive check to build history' };
+      return { available: false, anomalies: [], actionable: 'Run pulsetel check to build history' };
     }
 
     const anomalies = trendAnalyzer.detectAnomalies(history);
@@ -433,13 +433,13 @@ export class MCPServer {
     };
   }
 
-  private pulseliveMetrics(
+  private pulsetelMetrics(
     history: HistoryEntry[],
     trendAnalyzer: TrendAnalyzer,
     checkType?: string
   ): any {
     if (history.length === 0) {
-      return { available: false, actionable: 'Run pulselive check to build history' };
+      return { available: false, actionable: 'Run pulsetel check to build history' };
     }
 
     if (checkType) {
@@ -475,7 +475,7 @@ export class MCPServer {
     return { available: true, metrics };
   }
 
-  private pulseliveTelemetry(format: string = 'summary'): any {
+  private pulsetelTelemetry(format: string = 'summary'): any {
     // Check if OTel is available
     let otelAvailable = false;
     let otelConfig = null;
@@ -496,29 +496,29 @@ export class MCPServer {
     if (format === 'summary') {
       return {
         schema_version: "1.0.0",
-        schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+        schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
         version: VERSION,
         timestamp: new Date().toISOString(),
         otel_available: otelAvailable,
         otel_enabled: otelConfig?.enabled === true,
         otel_protocol: otelConfig?.protocol || 'http',
-        otel_service_name: otelConfig?.service_name || 'pulselive',
+        otel_service_name: otelConfig?.service_name || 'pulsetel',
         otel_endpoint: otelConfig?.endpoint || process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318'
       };
     } else {
       // Full format
       return {
         schema_version: "1.0.0",
-        schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+        schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
         version: VERSION,
         timestamp: new Date().toISOString(),
         otel: {
           available: otelAvailable,
           enabled: otelConfig?.enabled === true,
           protocol: otelConfig?.protocol || 'http',
-          service_name: otelConfig?.service_name || 'pulselive',
+          service_name: otelConfig?.service_name || 'pulsetel',
           endpoint: otelConfig?.endpoint || process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318',
-          export_dir: otelConfig?.export_dir || normalize(process.cwd() + '/.pulselive/otel'),
+          export_dir: otelConfig?.export_dir || normalize(process.cwd() + '/.pulsetel/otel'),
           last_export: otelAvailable ? 'Recent export completed' : 'Not available',
           status: otelAvailable ? (otelConfig?.enabled === true ? 'active' : 'disabled') : 'not_installed'
         }
@@ -526,19 +526,19 @@ export class MCPServer {
     }
   }
 
-  private async pulseliveStatus(
-    historyDir: string = '.pulselive-history'
+  private async pulsetelStatus(
+    historyDir: string = '.pulsetel-history'
   ): Promise<any> {
     const history = this.loadHistory(historyDir);
     
     if (history.length === 0) {
       return {
         schema_version: "1.0.0",
-        schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+        schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
         version: VERSION,
         timestamp: new Date().toISOString(),
         healthy: null,
-        message: "No history available. Run pulselive check first to establish baseline."
+        message: "No history available. Run pulsetel check first to establish baseline."
       };
     }
     
@@ -554,7 +554,7 @@ export class MCPServer {
     
     return {
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       healthy: healthy,
@@ -564,9 +564,9 @@ export class MCPServer {
     };
   }
 
-  // ── pulselive_multi_repo: multi-repository checks ───
+  // ── pulsetel_multi_repo: multi-repository checks ───
 
-  private async pulseliveMultiRepoCheck(
+  private async pulsetelMultiRepoCheck(
     reposString: string,
     quick: boolean,
     includeTrends?: boolean
@@ -629,7 +629,7 @@ export class MCPServer {
     
     const response: any = {
       schema_version: "1.0.0",
-      schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
       duration: totalDuration,
@@ -703,16 +703,16 @@ export class MCPServer {
     };
   }
 
-  // ── pulselive_sentry: Sentry error tracking ───
+  // ── pulsetel_sentry: Sentry error tracking ───
 
-  private async pulseliveSentry(scanner: Scanner): Promise<any> {
+  private async pulsetelSentry(scanner: Scanner): Promise<any> {
     const result = await scanner.runSingleCheck('sentry');
     return enrichResult(result);
   }
 
-  // ── pulselive_recommend: prioritised actionable recommendations ───
+  // ── pulsetel_recommend: prioritised actionable recommendations ───
 
-  private async pulseliveRecommend(
+  private async pulsetelRecommend(
     scanner: Scanner,
     history: HistoryEntry[],
     trendAnalyzer: TrendAnalyzer
@@ -839,7 +839,7 @@ export class MCPServer {
 
   private logMCPUsage(tool: string, startTime: number, status: 'success' | 'error'): void {
     try {
-      const historyDir = '.pulselive-history';
+      const historyDir = '.pulsetel-history';
       if (!existsSync(historyDir)) {
         mkdirSync(historyDir, { recursive: true });
       }
@@ -869,7 +869,7 @@ export class MCPServer {
     }
   }
 
-  private loadHistory(historyDir: string = '.pulselive-history'): HistoryEntry[] {
+  private loadHistory(historyDir: string = '.pulsetel-history'): HistoryEntry[] {
     try {
       if (!existsSync(historyDir)) {
         return [];

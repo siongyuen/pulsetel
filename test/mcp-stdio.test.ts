@@ -41,7 +41,7 @@ describe('MCPStdioServer', () => {
       expect(response.jsonrpc).toBe('2.0');
       expect(response.id).toBe(1);
       expect(response.result.protocolVersion).toBe('2024-11-05');
-      expect(response.result.serverInfo.name).toBe('pulselive');
+      expect(response.result.serverInfo.name).toBe('pulsetel');
     });
 
     it('handles initialized notification', async () => {
@@ -65,7 +65,7 @@ describe('MCPStdioServer', () => {
 
       expect(response.result.tools).toBeDefined();
       expect(response.result.tools.length).toBeGreaterThan(0);
-      expect(response.result.tools[0].name).toBe('pulselive_check');
+      expect(response.result.tools[0].name).toBe('pulsetel_check');
     });
 
     it('handles tools/call', async () => {
@@ -82,7 +82,7 @@ describe('MCPStdioServer', () => {
         id: 4,
         method: 'tools/call',
         params: {
-          name: 'pulselive_check',
+          name: 'pulsetel_check',
           arguments: {}
         }
       });
@@ -104,12 +104,12 @@ describe('MCPStdioServer', () => {
         id: 5,
         method: 'tools/call',
         params: {
-          name: 'pulselive_check',
+          name: 'pulsetel_check',
           arguments: { dir: '/test/project' }
         }
       });
 
-      expect(mockHandle).toHaveBeenCalledWith('pulselive_check', '/test/project', expect.any(Object));
+      expect(mockHandle).toHaveBeenCalledWith('pulsetel_check', '/test/project', expect.any(Object));
     });
 
     it('returns error for missing tool name', async () => {
@@ -134,7 +134,7 @@ describe('MCPStdioServer', () => {
         id: 7,
         method: 'tools/call',
         params: {
-          name: 'pulselive_check',
+          name: 'pulsetel_check',
           arguments: {}
         }
       });
@@ -188,12 +188,12 @@ describe('MCPStdioServer', () => {
         id: 10,
         method: 'tools/call',
         params: {
-          name: 'pulselive_check',
+          name: 'pulsetel_check',
           arguments: { include_trends: true }
         }
       });
 
-      expect(mockHandle).toHaveBeenCalledWith('pulselive_check', undefined, expect.objectContaining({ includeTrends: true }));
+      expect(mockHandle).toHaveBeenCalledWith('pulsetel_check', undefined, expect.objectContaining({ includeTrends: true }));
     });
 
     it('passes check_type and window arguments', async () => {
@@ -207,12 +207,12 @@ describe('MCPStdioServer', () => {
         id: 11,
         method: 'tools/call',
         params: {
-          name: 'pulselive_trends',
+          name: 'pulsetel_trends',
           arguments: { check_type: 'ci', window: 14 }
         }
       });
 
-      expect(mockHandle).toHaveBeenCalledWith('pulselive_trends', undefined, expect.objectContaining({
+      expect(mockHandle).toHaveBeenCalledWith('pulsetel_trends', undefined, expect.objectContaining({
         checkType: 'ci',
         window: 14
       }));
@@ -229,12 +229,12 @@ describe('MCPStdioServer', () => {
         id: 12,
         method: 'tools/call',
         params: {
-          name: 'pulselive_check',
+          name: 'pulsetel_check',
           arguments: { repos: 'org/repo1,org/repo2' }
         }
       });
 
-      expect(mockHandle).toHaveBeenCalledWith('pulselive_check', undefined, expect.objectContaining({
+      expect(mockHandle).toHaveBeenCalledWith('pulsetel_check', undefined, expect.objectContaining({
         repos: 'org/repo1,org/repo2'
       }));
     });
@@ -250,12 +250,12 @@ describe('MCPStdioServer', () => {
         id: 13,
         method: 'tools/call',
         params: {
-          name: 'pulselive_trends',
+          name: 'pulsetel_trends',
           arguments: {}
         }
       });
 
-      expect(mockHandle).toHaveBeenCalledWith('pulselive_trends', undefined, expect.objectContaining({
+      expect(mockHandle).toHaveBeenCalledWith('pulsetel_trends', undefined, expect.objectContaining({
         window: 7
       }));
     });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ConfigLoader } from '../src/config';
+import { ConfigLoader, defaultConfigLoaderDeps } from '../src/config';
 import { Scanner } from '../src/scanner';
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -99,40 +99,25 @@ checks:
 
   describe('SSH URL Pattern Matching', () => {
     it('should auto-detect GitHub repo from SSH URL', () => {
-      // Create a mock git remote
-      const mockGitRemote = 'git@github.com:siongyuen/pulselive.git';
-      
-      // Mock execFileSync to return our test URL
-      // Need to mock it before creating the ConfigLoader
-      const childProcess = require('child_process');
-      const originalExecFileSync = childProcess.execFileSync;
-      childProcess.execFileSync = vi.fn().mockReturnValue(mockGitRemote);
-      
-      // Create a config loader with a non-existent config file to avoid reading real config
-      const configLoader = new ConfigLoader('nonexistent-config.yml');
+      const mockGitRemote = 'git@github.com:siongyuen/pulsetel.git';
+      const mockDeps = {
+        ...defaultConfigLoaderDeps,
+        execFileSync: vi.fn().mockReturnValue(mockGitRemote)
+      };
+      const configLoader = new ConfigLoader('nonexistent-config.yml', mockDeps);
       const detectedConfig = configLoader.autoDetect();
-      
-      expect(detectedConfig.github?.repo).toBe('siongyuen/pulselive');
-      
-      // Restore mock
-      childProcess.execFileSync = originalExecFileSync;
+      expect(detectedConfig.github?.repo).toBe('siongyuen/pulsetel');
     });
 
     it('should auto-detect GitHub repo from HTTPS URL', () => {
-      const mockGitRemote = 'https://github.com/siongyuen/pulselive.git';
-      
-      const childProcess = require('child_process');
-      const originalExecFileSync = childProcess.execFileSync;
-      childProcess.execFileSync = vi.fn().mockReturnValue(mockGitRemote);
-      
-      // Create a config loader with a non-existent config file to avoid reading real config
-      const configLoader = new ConfigLoader('nonexistent-config.yml');
+      const mockGitRemote = 'https://github.com/siongyuen/pulsetel.git';
+      const mockDeps = {
+        ...defaultConfigLoaderDeps,
+        execFileSync: vi.fn().mockReturnValue(mockGitRemote)
+      };
+      const configLoader = new ConfigLoader('nonexistent-config.yml', mockDeps);
       const detectedConfig = configLoader.autoDetect();
-      
-      expect(detectedConfig.github?.repo).toBe('siongyuen/pulselive');
-      
-      // Restore mock
-      childProcess.execFileSync = originalExecFileSync;
+      expect(detectedConfig.github?.repo).toBe('siongyuen/pulsetel');
     });
   });
 
@@ -156,7 +141,7 @@ checks:
         encoding: 'utf8'
       });
       
-      expect(result).toContain('PulseLive GitHub Token Setup');
+      expect(result).toContain('PulseTel GitHub Token Setup');
       expect(result).toContain('GitHub token');
       expect(result).toContain('https://github.com/settings/tokens');
     });
@@ -169,7 +154,7 @@ checks:
         encoding: 'utf8'
       });
       
-      expect(result).toMatch(/!\[pulselive\]\(https:\/\/img\.shields\.io\/badge\/pulselive-[a-z]+-[a-z]+\)/);
+      expect(result).toMatch(/!\[pulsetel\]\(https:\/\/img\.shields\.io\/badge\/pulsetel-[a-z]+-[a-z]+\)/);
     });
 
     it('should generate badge JSON when --json flag is used', () => {
@@ -183,14 +168,14 @@ checks:
       expect(badgeData).toHaveProperty('color');
       expect(badgeData).toHaveProperty('url');
       expect(badgeData).toHaveProperty('markdown');
-      expect(badgeData.url).toContain('img.shields.io/badge/pulselive-');
+      expect(badgeData.url).toContain('img.shields.io/badge/pulsetel-');
     });
   });
 
   describe('Trend Analysis Cold Start Guidance', () => {
     it('should show insufficient data message for trends with < 3 data points', () => {
       // Clear history first
-      const historyDir = path.join(__dirname, '..', '.pulselive-history');
+      const historyDir = path.join(__dirname, '..', '.pulsetel-history');
       if (fs.existsSync(historyDir)) {
         fs.rmSync(historyDir, { recursive: true });
       }
@@ -209,13 +194,13 @@ checks:
       });
       
       expect(result).toContain('Insufficient data for trend analysis');
-      expect(result).toContain('run `pulselive check` a few more times');
+      expect(result).toContain('run `pulsetel check` a few more times');
       expect(result).toContain('currently have 1 data points, need at least 3');
     });
 
     it('should show insufficient data message for anomalies with < 5 data points', { timeout: 60000 }, () => {
       // Clear history first
-      const historyDir = path.join(__dirname, '..', '.pulselive-history');
+      const historyDir = path.join(__dirname, '..', '.pulsetel-history');
       if (fs.existsSync(historyDir)) {
         fs.rmSync(historyDir, { recursive: true });
       }
@@ -241,7 +226,7 @@ checks:
 
     it('should allow trends to work normally with sufficient data', { timeout: 60000 }, () => {
       // Clear history first
-      const historyDir = path.join(__dirname, '..', '.pulselive-history');
+      const historyDir = path.join(__dirname, '..', '.pulsetel-history');
       if (fs.existsSync(historyDir)) {
         fs.rmSync(historyDir, { recursive: true });
       }
@@ -265,6 +250,8 @@ checks:
       expect(result).toContain('TREND ANALYSIS');
       expect(result).not.toContain('Insufficient data for trend analysis');
     });
+  });
+
   describe('Config Validation Warnings', () => {
     it('should show config validation warnings when running check command', () => {
       const testConfigPath = path.join(__dirname, '..', 'test-invalid-config.yml');
@@ -280,7 +267,7 @@ github:
       // Run check with invalid config - capture both stdout and stderr
       const result = execSync('node dist/index.js check', { 
         cwd: path.join(__dirname, '..'),
-        env: { ...process.env, PULSELIVE_CONFIG: testConfigPath },
+        env: { ...process.env, PULSETEL_CONFIG: testConfigPath },
         encoding: 'utf8',
         timeout: 30000
       });
@@ -302,7 +289,7 @@ github:
         fs.mkdirSync(testDir);
       }
       
-      const testConfigPath = path.join(testDir, '.pulselive.yml');
+      const testConfigPath = path.join(testDir, '.pulsetel.yml');
       const invalidConfig = `
 invalidKey: true
 github:
@@ -312,7 +299,7 @@ github:
       fs.writeFileSync(testConfigPath, invalidConfig);
       
       // Test that config validation works with directory argument
-      const configLoader = new ConfigLoader(testDir + '/.pulselive.yml');
+      const configLoader = new ConfigLoader(testDir + '/.pulsetel.yml');
       const validation = configLoader.validateConfig();
       
       expect(validation.warnings).toContain('Unknown top-level key: "invalidKey"');
@@ -322,5 +309,4 @@ github:
       fs.rmdirSync(testDir);
     });
   });
-});
 });
