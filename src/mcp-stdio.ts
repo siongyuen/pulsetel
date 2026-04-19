@@ -16,7 +16,7 @@ import { VERSION } from './version';
  *   "mcpServers": {
  *     "pulsetel": {
  *       "command": "npx",
- *       "args": ["-y", "pulsetel-cli", "mcp-stdio"]
+ *       "args": ["-y", "pulsetel", "mcp-stdio"]
  *     }
  *   }
  * }

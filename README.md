@@ -2,7 +2,7 @@
 
 **Real-time project telemetry for AI agents and developers. One command to check CI, deploys, endpoints, dependencies, and issues — with trend analysis and anomaly detection.**
 
-[![npm version](https://img.shields.io/npm/v/pulsetel-cli.svg)](https://www.npmjs.com/package/pulsetel-cli) [![Test Coverage](https://img.shields.io/badge/coverage-81%25%20statements-brightgreen)](https://github.com/siongyuen/pulsetel) [![Tests](https://img.shields.io/badge/tests-638%20passing-brightgreen)](https://github.com/siongyuen/pulsetel) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![npm version](https://img.shields.io/npm/v/pulsetel.svg)](https://www.npmjs.com/package/pulsetel) [![Test Coverage](https://img.shields.io/badge/coverage-81%25%20statements-brightgreen)](https://github.com/siongyuen/pulsetel) [![Tests](https://img.shields.io/badge/tests-638%20passing-brightgreen)](https://github.com/siongyuen/pulsetel) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Why PulseTel?
 
@@ -27,9 +27,9 @@ PulseTel fills the gap. One call gives you the full picture: what's broken, what
 ## Installation
 
 ```bash
-npx pulsetel-cli check
+npx pulsetel check
 # or install globally
-npm install -g pulsetel-cli
+npm install -g pulsetel
 pulsetel check
 ```
 
@@ -97,7 +97,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "pulsetel": {
       "command": "npx",
-      "args": ["-y", "pulsetel-cli", "mcp-stdio"]
+      "args": ["-y", "pulsetel", "mcp-stdio"]
     }
   }
 }
