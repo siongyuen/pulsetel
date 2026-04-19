@@ -75,7 +75,7 @@ interface AnomalyResult {
 interface HistoryEntry {
   timestamp: string;
   hostname?: string;
-  pulselive_version?: string;
+  pulsetel_version?: string;
   results: Array<{
     type: string;
     status: 'success' | 'warning' | 'error';
@@ -99,7 +99,7 @@ CLI: pulsetel check
   → WebhookNotifier.notify(results)   # Fire-and-forget webhook POSTs
   → saveHistory(results)               # Write to .pulsetel-history/run-*.json
 
-MCP: GET /?tool=pulselive_check
+MCP: GET /?tool=pulsetel_check
   → Same flow as CLI
   → enrichResult() adds: severity, confidence, actionable, context
   → If include_trends=true: TrendAnalyzer.analyze() + detectAnomalies()
@@ -119,15 +119,15 @@ All tools accessed via HTTP: `GET /?tool=<name>&dir=<path>&<params>`
 
 | Tool | Purpose | Key Params |
 |------|---------|------------|
-| `pulselive_check` | Full health check | `include_trends=true` for trend data |
-| `pulselive_ci` | CI check only | — |
-| `pulselive_health` | Endpoint check only | — |
-| `pulselive_deps` | Dependency check only | — |
-| `pulselive_summary` | Summary + top anomalies + overall trend | — |
-| `pulselive_trends` | Trend analysis | `check_type`, `window` (default 7) |
-| `pulselive_anomalies` | Anomaly detection | — |
-| `pulselive_metrics` | Full telemetry (history + trends + current) | `check_type` |
-| `pulselive_recommend` | Prioritised action items ranked by impact | — |
+| `pulsetel_check` | Full health check | `include_trends=true` for trend data |
+| `pulsetel_ci` | CI check only | — |
+| `pulsetel_health` | Endpoint check only | — |
+| `pulsetel_deps` | Dependency check only | — |
+| `pulsetel_summary` | Summary + top anomalies + overall trend | — |
+| `pulsetel_trends` | Trend analysis | `check_type`, `window` (default 7) |
+| `pulsetel_anomalies` | Anomaly detection | — |
+| `pulsetel_metrics` | Full telemetry (history + trends + current) | `check_type` |
+| `pulsetel_recommend` | Prioritised action items ranked by impact | — |
 
 **Every MCP response includes:**
 - `severity`: `'critical' | 'warning' | 'info'`

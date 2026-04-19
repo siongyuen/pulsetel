@@ -18,7 +18,7 @@ PulseTel fills the gap. One call gives you the full picture: what's broken, what
 ### What makes it different
 
 - **Agent-first responses**: Every MCP tool returns `actionable`, `severity`, `confidence`, `context` — not raw data you have to interpret
-- **`pulselive_recommend`**: A ranked action list. Rank 1 is what you should fix right now
+- **`pulsetel_recommend`**: A ranked action list. Rank 1 is what you should fix right now
 - **Trend analysis**: Not just "is it broken now?" but "is it getting worse?" with direction, delta, and velocity
 - **Anomaly detection**: Statistical (2σ from rolling mean), not threshold-based
 - **Webhook alerts**: HMAC-signed push on anomalies, degrading trends, flaky CI
@@ -95,7 +95,7 @@ Add to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "pulselive": {
+    "pulsetel": {
       "command": "npx",
       "args": ["-y", "pulsetel-cli", "mcp-stdio"]
     }
@@ -117,25 +117,25 @@ Starts an HTTP server on port 3000.
 
 | Tool | What It Returns |
 |------|----------------|
-| `pulselive_check` | Full health check (all modules) + optional trends |
-| `pulselive_quick` | Fast triage (~2s) — skips deps and coverage |
-| `pulselive_ci` | CI status + flakiness score + trend |
-| `pulselive_health` | Endpoint health + latency + baseline comparison |
-| `pulselive_deps` | Dependency audit (vulnerable + outdated) |
-| `pulselive_summary` | Summary + top anomalies + overall trend direction |
-| `pulselive_trends` | Trend analysis: direction, delta, velocity per check |
-| `pulselive_anomalies` | Anomaly detection (2σ from rolling mean) |
-| `pulselive_metrics` | Full telemetry: history + trends + current values |
-| `pulselive_recommend` | **Prioritised action items** ranked by severity + confidence |
-| `pulselive_status` | Lightweight health ping (sub-10ms, no API calls) |
+| `pulsetel_check` | Full health check (all modules) + optional trends |
+| `pulsetel_quick` | Fast triage (~2s) — skips deps and coverage |
+| `pulsetel_ci` | CI status + flakiness score + trend |
+| `pulsetel_health` | Endpoint health + latency + baseline comparison |
+| `pulsetel_deps` | Dependency audit (vulnerable + outdated) |
+| `pulsetel_summary` | Summary + top anomalies + overall trend direction |
+| `pulsetel_trends` | Trend analysis: direction, delta, velocity per check |
+| `pulsetel_anomalies` | Anomaly detection (2σ from rolling mean) |
+| `pulsetel_metrics` | Full telemetry: history + trends + current values |
+| `pulsetel_recommend` | **Prioritised action items** ranked by severity + confidence |
+| `pulsetel_status` | Lightweight health ping (sub-10ms, no API calls) |
 
 ### HTTP Query Parameters
 
 ```
-GET /?tool=pulselive_check&include_trends=true
-GET /?tool=pulselive_trends&check_type=deps&window=14
-GET /?tool=pulselive_metrics&check_type=ci
-GET /?tool=pulselive_recommend
+GET /?tool=pulsetel_check&include_trends=true
+GET /?tool=pulsetel_trends&check_type=deps&window=14
+GET /?tool=pulsetel_metrics&check_type=ci
+GET /?tool=pulsetel_recommend
 GET /?dir=/path/to/project
 ```
 
@@ -158,7 +158,7 @@ Every response includes structured, actionable data:
 
 ### Recommendations — The Killer Feature
 
-`pulselive_recommend` ranks what matters most, so agents don't waste time on low-impact items:
+`pulsetel_recommend` ranks what matters most, so agents don't waste time on low-impact items:
 
 ```json
 {
@@ -433,25 +433,25 @@ Writes NDJSON files to `.pulsetel/otel/` directory:
 
 PulseTel creates detailed traces for each check:
 
-- **Root span**: `pulselive.check` with total duration and summary attributes
-- **Child spans**: `pulselive.check.{type}` for each check type with attributes:
-  - `pulselive.check_type`
-  - `pulselive.severity`
-  - `pulselive.confidence`
-  - `pulselive.status`
-  - `pulselive.actionable`
-  - `pulselive.duration_ms`
+- **Root span**: `pulsetel.check` with total duration and summary attributes
+- **Child spans**: `pulsetel.check.{type}` for each check type with attributes:
+  - `pulsetel.check_type`
+  - `pulsetel.severity`
+  - `pulsetel.confidence`
+  - `pulsetel.status`
+  - `pulsetel.actionable`
+  - `pulsetel.duration_ms`
 
 ### Metrics
 
 PulseTel exports the following metrics:
 
-- `pulselive.health.score` - Gauge (0-100) per check type
-- `pulselive.anomalies.total` - Counter of detected anomalies
-- `pulselive.deps.vulnerable` - Counter of vulnerable dependencies
-- `pulselive.deps.outdated` - Counter of outdated dependencies
-- `pulselive.issues.open` - Counter of open issues
-- `pulselive.ci.flakiness_score` - Gauge of CI flakiness
+- `pulsetel.health.score` - Gauge (0-100) per check type
+- `pulsetel.anomalies.total` - Counter of detected anomalies
+- `pulsetel.deps.vulnerable` - Counter of vulnerable dependencies
+- `pulsetel.deps.outdated` - Counter of outdated dependencies
+- `pulsetel.issues.open` - Counter of open issues
+- `pulsetel.ci.flakiness_score` - Gauge of CI flakiness
 
 ### Logs
 
@@ -461,16 +461,16 @@ Structured logs are emitted for:
 - Degrading trends
 - Flaky CI detection
 
-### MCP Tool: pulselive_telemetry
+### MCP Tool: pulsetel_telemetry
 
 Get current OTel configuration and status:
 
 ```bash
 # Summary format
-pulselive mcp-stdio --tool pulselive_telemetry --format summary
+pulsetel mcp-stdio --tool pulsetel_telemetry --format summary
 
 # Full format  
-pulselive mcp-stdio --tool pulselive_telemetry --format full
+pulsetel mcp-stdio --tool pulsetel_telemetry --format full
 ```
 
 ### Example Setup with Grafana
@@ -607,11 +607,11 @@ export SENTRY_TOKEN=your-sentry-auth-token
 
 The token needs `org:read` and `project:read` scopes.
 
-### MCP Tool: pulselive_sentry
+### MCP Tool: pulsetel_sentry
 
 ```bash
 # Via MCP HTTP
-GET /?tool=pulselive_sentry
+GET /?tool=pulsetel_sentry
 
 # Via MCP stdio (Claude Desktop, Cursor)
 # Automatically available when sentry is configured

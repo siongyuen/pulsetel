@@ -34,7 +34,7 @@ The current SSRF (Server-Side Request Forgery) protections employ a "check-then-
 ## 3. High Finding: Path Traversal & Escaping (Severity: High)
 
 ### 3.1 Description
-Tools designed to provide project summaries or telemetry (e.g., `pulselive_check`) necessitate file system access. Without rigorous sanitisation, an agent can be coerced into reading files outside the designated project root.
+Tools designed to provide project summaries or telemetry (e.g., `pulsetel_check`) necessitate file system access. Without rigorous sanitisation, an agent can be coerced into reading files outside the designated project root.
 
 ### 3.2 Vulnerability Vector
 An attacker might provide a payload such as `../../../../etc/passwd` or `~/.ssh/config`. If the logic does not resolve the absolute path and compare it against a "Safe Root," the integrity of the host system is compromised.
