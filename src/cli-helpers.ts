@@ -596,12 +596,12 @@ export async function fixDependencies(workingDir: string, dryRun: boolean, skipC
 
 // ── Multi-repo check ───
 
-export async function handleMultiRepoCheck(reposString: string, options: { json?: boolean; quick?: boolean; exitCode?: boolean }): Promise<void> {
+export async function handleMultiRepoCheck(reposString: string, options: { json?: boolean; quick?: boolean; exitCode?: boolean }, deps: CLIDeps = defaultCLIDeps): Promise<void> {
   const repoList = reposString.split(',').map(r => r.trim()).filter(r => r.length > 0);
   
   if (repoList.length === 0) {
-    console.error('❌ No valid repositories specified');
-    process.exit(1);
+    deps.error('❌ No valid repositories specified');
+    deps.exit(1);
   }
   
   const startTime = Date.now();
@@ -656,7 +656,7 @@ export async function handleMultiRepoCheck(reposString: string, options: { json?
   if (options.json) {
     const overallSummary = computeMultiRepoSummary(results);
     
-    console.log(JSON.stringify({
+    deps.log(JSON.stringify({
       schema_version: "1.0.0",
       schema_url: "https://github.com/siongyuen/pulselive/blob/master/SCHEMA.md",
       version: VERSION,
@@ -672,48 +672,48 @@ export async function handleMultiRepoCheck(reposString: string, options: { json?
     }, null, 2));
   } else {
     // Table output
-    console.log('MULTI-REPO HEALTH CHECK');
-    console.log('=======================\n');
+    deps.log('MULTI-REPO HEALTH CHECK');
+    deps.log('=======================\n');
     
     // Header
-    console.log('Repo'.padEnd(30) + 'Status'.padEnd(10) + 'Critical'.padEnd(10) + 'Warnings'.padEnd(10) + 'Healthy');
-    console.log('-'.repeat(70));
+    deps.log('Repo'.padEnd(30) + 'Status'.padEnd(10) + 'Critical'.padEnd(10) + 'Warnings'.padEnd(10) + 'Healthy');
+    deps.log('-'.repeat(70));
     
     // Row for each repo
     for (const result of results) {
       if (result.error) {
-        console.log(result.repo.padEnd(30) + '❌ ERROR'.padEnd(10) + '-'.padEnd(10) + '-'.padEnd(10) + '-');
-        console.log(`  Error: ${result.error}`);
+        deps.log(result.repo.padEnd(30) + '❌ ERROR'.padEnd(10) + '-'.padEnd(10) + '-'.padEnd(10) + '-');
+        deps.log(`  Error: ${result.error}`);
       } else {
         const critical = result.results.filter(r => r.status === 'error').length;
         const warnings = result.results.filter(r => r.status === 'warning').length;
         const healthy = result.results.filter(r => r.status === 'success').length;
         const statusIcon = critical > 0 ? '❌' : warnings > 0 ? '⚠️' : '✅';
         
-        console.log(result.repo.padEnd(30) + statusIcon.padEnd(10) + critical.toString().padEnd(10) + warnings.toString().padEnd(10) + healthy.toString());
+        deps.log(result.repo.padEnd(30) + statusIcon.padEnd(10) + critical.toString().padEnd(10) + warnings.toString().padEnd(10) + healthy.toString());
       }
     }
     
     // Summary
     const overallSummary = computeMultiRepoSummary(results);
-    console.log('\nSUMMARY');
-    console.log('-------');
-    console.log(`Total repos: ${results.length}`);
-    console.log(`Repos with errors: ${overallSummary.reposWithErrors}`);
-    console.log(`Repos with warnings: ${overallSummary.reposWithWarnings}`);
-    console.log(`Overall status: ${overallSummary.overallStatus}`);
-    console.log(`\n⏱  Total: ${totalDuration}ms`);
+    deps.log('\nSUMMARY');
+    deps.log('-------');
+    deps.log(`Total repos: ${results.length}`);
+    deps.log(`Repos with errors: ${overallSummary.reposWithErrors}`);
+    deps.log(`Repos with warnings: ${overallSummary.reposWithWarnings}`);
+    deps.log(`Overall status: ${overallSummary.overallStatus}`);
+    deps.log(`\n⏱  Total: ${totalDuration}ms`);
   }
   
   // Exit codes for multi-repo
   if (options.exitCode) {
     const overallSummary = computeMultiRepoSummary(results);
     if (overallSummary.reposWithErrors > 0) {
-      process.exit(1); // Critical issues found
+      deps.exit(1); // Critical issues found
     } else if (overallSummary.reposWithWarnings > 0) {
-      process.exit(2); // Warnings only
+      deps.exit(2); // Warnings only
     } else {
-      process.exit(0); // All checks healthy
+      deps.exit(0); // All checks healthy
     }
   }
 }
