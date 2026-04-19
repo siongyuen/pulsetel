@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-04-19T22:08:27.398Z",
+  "hostname": "openclaw",
+  "pulsetel_version": "2.0.0",
+  "results": [
+    {
+      "type": "ci",
+      "status": "warning",
+      "message": "No GitHub token provided, skipping CI check",
+      "duration": 1,
+      "metrics": {}
+    },
+    {
+      "type": "health",
+      "status": "warning",
+      "message": "Some endpoints have issues (0 performance warning(s), avg 0ms)",
+      "duration": 553,
+      "metrics": {
+        "endpoints": [
+          {
+            "url": "https://httpbin.org/status/200",
+            "latency": 533,
+            "status": 400
+          }
+        ]
+      }
+    },
+    {
+      "type": "git",
+      "status": "success",
+      "message": "Git status: master branch",
+      "duration": 45,
+      "metrics": {
+        "uncommitted": 5
+      }
+    },
+    {
+      "type": "issues",
+      "status": "warning",
+      "message": "No GitHub token provided, skipping issues check",
+      "duration": 0,
+      "metrics": {}
+    },
+    {
+      "type": "prs",
+      "status": "warning",
+      "message": "No GitHub token provided, skipping PRs check",
+      "duration": 1,
+      "metrics": {}
+    },
+    {
+      "type": "coverage",
+      "status": "warning",
+      "message": "No coverage reports found (local or remote)",
+      "duration": 1450,
+      "metrics": {}
+    },
+    {
+      "type": "sentry",
+      "status": "warning",
+      "message": "Sentry not configured — add sentry.organization and sentry.project to .pulsetel.yml",
+      "duration": 0,
+      "metrics": {}
+    }
+  ]
+}
