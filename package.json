@@ -50,7 +50,7 @@
   },
   "homepage": "https://github.com/siongyuen/pulsetel#readme",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "chalk": "5.3.0",

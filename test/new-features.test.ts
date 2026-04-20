@@ -151,7 +151,8 @@ checks:
     it('should generate badge markdown', () => {
       const result = execSync('node dist/index.js badge', { 
         cwd: __dirname + '/..',
-        encoding: 'utf8'
+        encoding: 'utf8',
+        timeout: 30000
       });
       
       expect(result).toMatch(/!\[pulsetel\]\(https:\/\/img\.shields\.io\/badge\/pulsetel-[a-z]+-[a-z]+\)/);

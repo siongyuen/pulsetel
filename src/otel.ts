@@ -11,6 +11,9 @@ let otelMetrics: any = null;
 let otelResources: any = null;
 let otelSemanticConventions: any = null;
 
+// Module-level flag to track whether OTel deps are available
+let otelDepsAvailable: boolean | null = null;
+
 interface OtelConfig {
   enabled?: boolean;
   endpoint?: string;
@@ -28,6 +31,7 @@ interface OtelState {
   metricsExporter: any;
   logsExporter: any;
   isInitialized: boolean;
+  _config?: PulseliveConfig;
 }
 
 const state: OtelState = {
@@ -46,6 +50,9 @@ const state: OtelState = {
  * Returns true if all dependencies are available
  */
 function tryLoadOtelDependencies(): boolean {
+  if (otelDepsAvailable !== null) {
+    return otelDepsAvailable;
+  }
   try {
     otelApi = require('@opentelemetry/api');
     otelSdk = require('@opentelemetry/sdk-node');
@@ -53,11 +60,21 @@ function tryLoadOtelDependencies(): boolean {
     otelMetrics = require('@opentelemetry/sdk-metrics');
     otelResources = require('@opentelemetry/resources');
     otelSemanticConventions = require('@opentelemetry/semantic-conventions');
+    otelDepsAvailable = true;
     return true;
   } catch (error) {
     // Dependencies not available - OTel features will be silently disabled
+    otelDepsAvailable = false;
     return false;
   }
+}
+
+/**
+ * Force OTel dependency check to be re-evaluated on next call.
+ * Used for testing to reset cached state.
+ */
+export function _resetOtelDepsCache(): void {
+  otelDepsAvailable = null;
 }
 
 /**
@@ -186,6 +203,9 @@ export function initOtel(config: PulseliveConfig): boolean {
     // Create meter
     const meter = meterProvider.getMeter('pulsetel');
 
+    // Store config for use by exportResults
+    state._config = config;
+
     // Store state
     state.tracerProvider = traceProvider;
     state.meterProvider = meterProvider;
@@ -263,7 +283,102 @@ export function exportResults(results: CheckResult[]): void {
   }
 
   try {
-    // Create counters and gauges
+    const otelConfig = (state as any)._config?.otel || {};
+    const protocol = otelConfig.protocol || 'http';
+    const exportDir = otelConfig.export_dir || path.join(process.cwd(), '.pulsetel', 'otel');
+
+    // For file protocol, write directly to JSONL files for deterministic output
+    if (protocol === 'file') {
+      if (!existsSync(exportDir)) {
+        mkdirSync(exportDir, { recursive: true });
+      }
+
+      const metrics: any[] = [];
+
+      results.forEach(result => {
+        // Calculate health score
+        let healthScore = 0;
+        if (result.status === 'success') {
+          healthScore = 100;
+        } else if (result.status === 'warning') {
+          healthScore = 50;
+        } else if (result.status === 'error') {
+          healthScore = 0;
+        }
+
+        metrics.push({
+          name: 'pulsetel.health.score',
+          value: healthScore,
+          attributes: { check_type: result.type },
+          timestamp: new Date().toISOString()
+        });
+
+        // Add specific metrics based on check type
+        if (result.type === 'deps' && result.details) {
+          metrics.push({
+            name: 'pulsetel.deps.vulnerable',
+            value: result.details.vulnerable || 0,
+            timestamp: new Date().toISOString()
+          });
+          metrics.push({
+            name: 'pulsetel.deps.outdated',
+            value: result.details.outdated || 0,
+            timestamp: new Date().toISOString()
+          });
+        } else if (result.type === 'issues' && result.details) {
+          metrics.push({
+            name: 'pulsetel.issues.open',
+            value: result.details.open || 0,
+            timestamp: new Date().toISOString()
+          });
+        } else if (result.type === 'ci' && result.details) {
+          metrics.push({
+            name: 'pulsetel.ci.flakiness_score',
+            value: result.details.flakinessScore || 0,
+            timestamp: new Date().toISOString()
+          });
+        }
+      });
+
+      // Count total anomalies
+      const criticalResults = results.filter(r => r.status === 'error');
+      metrics.push({
+        name: 'pulsetel.anomalies.total',
+        value: criticalResults.length,
+        timestamp: new Date().toISOString()
+      });
+
+      // Write metrics to JSONL file
+      const metricsPath = path.join(exportDir, 'metrics.jsonl');
+      metrics.forEach(m => {
+        appendFileSync(metricsPath, JSON.stringify(m) + '\n');
+      });
+
+      // Log anomaly events to file
+      const anomalies = results.filter(r => r.severity === 'high' || r.severity === 'critical');
+      if (anomalies.length > 0) {
+        const logsPath = path.join(exportDir, 'logs.jsonl');
+        anomalies.forEach(result => {
+          const logRecord = {
+            body: result.message,
+            severityText: result.severity,
+            attributes: {
+              check_type: result.type,
+              severity: result.severity,
+              confidence: result.confidence,
+              actionable: result.actionable,
+              context: result.context
+            },
+            timestamp: new Date().toISOString()
+          };
+          appendFileSync(logsPath, JSON.stringify(logRecord) + '\n');
+        });
+      }
+
+      return; // File export complete, skip SDK meter path
+    }
+
+    // HTTP protocol path — use SDK meters
     const healthScoreGauge = state.meter.createCounter('pulsetel.health.score', {
       description: 'Health score per check type (0-100)'
     });
@@ -410,6 +525,7 @@ export async function shutdownOtel(): Promise<void> {
 
     // Reset state
     state.isInitialized = false;
+    otelDepsAvailable = null;
     
   } catch (error) {
     console.error('[pulsetel-otel] Failed to shutdown OpenTelemetry:', error);

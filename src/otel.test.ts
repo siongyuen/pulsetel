@@ -2,28 +2,33 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { initOtel, shutdownOtel, exportResults, withOtelSpan } from './otel';
 import { PulseliveConfig } from './config';
 import { CheckResult } from './scanner';
-import { existsSync, readFileSync, unlinkSync, rmdirSync } from 'fs';
+import { existsSync, readFileSync, rmSync } from 'fs';
 import path from 'path';
 
-describe('OpenTelemetry Integration', () => {
-  const testDir = path.join(__dirname, '..', '.test-otel');
-  const exportDir = path.join(testDir, 'otel');
+let testCounter = 0;
 
-  beforeEach(() => {
-    // Clean up any existing test files
-    if (existsSync(exportDir)) {
-      try {
-        unlinkSync(path.join(exportDir, 'traces.jsonl'));
-        unlinkSync(path.join(exportDir, 'metrics.jsonl'));
-        unlinkSync(path.join(exportDir, 'logs.jsonl'));
-        rmdirSync(exportDir);
-      } catch { /* ignore */ }
-    }
+function getUniqueExportDir() {
+  testCounter++;
+  return path.join(__dirname, '..', '.test-otel', `otel-test-${testCounter}`);
+}
+
+describe('OpenTelemetry Integration', () => {
+  let exportDir: string;
+
+  beforeEach(async () => {
+    // Ensure clean OTel state
+    await shutdownOtel();
+    // Unique directory per test to avoid cross-test file contamination
+    exportDir = getUniqueExportDir();
   });
 
   afterEach(async () => {
     // Clean up and shutdown OTel
     await shutdownOtel();
+    // Remove test directory
+    if (existsSync(exportDir)) {
+      rmSync(exportDir, { recursive: true, force: true });
+    }
   });
 
   it('should initialize OTel with file protocol', () => {
