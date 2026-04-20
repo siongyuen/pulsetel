@@ -92,8 +92,8 @@ describe('DepsCheck', () => {
 
     // Mock valid package.json for JSON validation
     mockDeps.readFileSync.mockReturnValue(JSON.stringify({
-      name: test-package,
-      version: 1.0.0
+      name: 'test-package',
+      version: '1.0.0'
     }));
 
     const check = new DepsCheck(config, mockDeps);
@@ -118,8 +118,8 @@ describe('DepsCheck', () => {
 
     // Mock valid package.json for JSON validation
     mockDeps.readFileSync.mockReturnValue(JSON.stringify({
-      name: test-package,
-      version: 1.0.0
+      name: 'test-package',
+      version: '1.0.0'
     }));
 
     const check = new DepsCheck(config, mockDeps);
