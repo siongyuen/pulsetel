@@ -6,7 +6,7 @@ function makeDeps(configContent: string) {
     readFileSync: () => configContent,
     statSync: () => ({ size: 100 }),
     execFileSync: () => '',
-    existsSync: () => false
+    existsSync: () => true
   };
 }
 

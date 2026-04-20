@@ -84,6 +84,7 @@ program
 
 program
   .command('quick')
+  .alias('triage')
   .argument('[dir]', 'Directory to check (defaults to current directory)')
   .option('--json', 'Output results as JSON')
   .option('--repos <repos>', 'Check multiple repositories (format: owner/repo1,owner/repo2)')

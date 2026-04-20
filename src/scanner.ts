@@ -175,10 +175,11 @@ export class Scanner {
         result.duration = Date.now() - startTime;
         results.push(result);
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
         results.push({
           type: entry.type,
           status: 'error',
-          message: 'Check failed after retries',
+          message: `${entry.type} check failed: ${errorMsg}`,
           duration: Date.now() - startTime
         });
       }
@@ -223,10 +224,11 @@ export class Scanner {
     try {
       result = await this.runCheck(entry!);
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
       result = {
         type: checkType,
         status: 'error',
-        message: 'Check failed after retries'
+        message: `${checkType} check failed: ${errorMsg}`
       };
     }
 
@@ -258,10 +260,11 @@ export class Scanner {
         result.duration = Date.now() - startTime;
         results.push(result);
       } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
         results.push({
           type: entry.type,
           status: 'error',
-          message: 'Check failed after retries',
+          message: `${entry.type} check failed: ${errorMsg}`,
           duration: Date.now() - startTime
         });
       }

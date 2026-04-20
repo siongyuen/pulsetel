@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-04-20T10:31:22.504Z",
+  "timestamp": "2026-04-20T11:27:16.320Z",
   "hostname": "openclaw",
-  "pulsetel_version": "2.0.0",
+  "pulsetel_version": "2.1.2",
   "results": [
     {
       "type": "ci",
@@ -14,12 +14,12 @@
       "type": "health",
       "status": "warning",
       "message": "Some endpoints have issues (0 performance warning(s), avg 0ms)",
-      "duration": 526,
+      "duration": 522,
       "metrics": {
         "endpoints": [
           {
             "url": "https://httpbin.org/status/200",
-            "latency": 512,
+            "latency": 507,
             "status": 400
           }
         ]
@@ -29,9 +29,9 @@
       "type": "git",
       "status": "success",
       "message": "Git status: master branch",
-      "duration": 30,
+      "duration": 31,
       "metrics": {
-        "uncommitted": 11
+        "uncommitted": 15
       }
     },
     {
@@ -45,14 +45,14 @@
       "type": "prs",
       "status": "warning",
       "message": "No GitHub token provided, skipping PRs check",
-      "duration": 0,
+      "duration": 1,
       "metrics": {}
     },
     {
       "type": "coverage",
       "status": "error",
       "message": "Coverage: 59.5% (threshold: 80%) [lcov]",
-      "duration": 1449,
+      "duration": 1451,
       "metrics": {
         "percentage": 59.45216049382716
       }
@@ -61,7 +61,7 @@
       "type": "sentry",
       "status": "warning",
       "message": "Sentry not configured — add sentry.organization and sentry.project to .pulsetel.yml",
-      "duration": 0,
+      "duration": 1,
       "metrics": {}
     }
   ]

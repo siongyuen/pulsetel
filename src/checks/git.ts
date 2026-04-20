@@ -136,7 +136,7 @@ export class GitCheck {
       return {
         type: 'git',
         status: 'error',
-        message: 'Git check failed'
+        message: `Git check failed: ${error instanceof Error ? error.message : String(error)}`
       };
     }
   }

@@ -9,7 +9,7 @@ describe('ConfigLoader', () => {
       readFileSync: vi.fn(),
       statSync: vi.fn(),
       execFileSync: vi.fn(),
-      existsSync: vi.fn()
+      existsSync: vi.fn().mockReturnValue(true)
     };
   });
 
@@ -24,9 +24,7 @@ describe('ConfigLoader', () => {
   });
 
   it('should return empty config when file not found', () => {
-    mockDeps.statSync.mockImplementation(() => {
-      throw new Error('File not found');
-    });
+    mockDeps.existsSync.mockReturnValue(false);
     
     const configLoader = new ConfigLoader(undefined, mockDeps);
     const config = configLoader.getConfig();

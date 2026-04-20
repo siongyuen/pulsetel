@@ -114,6 +114,19 @@ export class CLIHandlers {
   constructor(private deps: HandlersDeps = defaultHandlersDeps) {}
 
   /**
+   * Validate that an explicitly-provided directory exists.
+   * Prints an error and exits(1) if the dir is given but doesn't exist.
+   * Returns the resolved working directory.
+   */
+  private validateDir(dir: string | undefined): string {
+    if (dir && !this.deps.existsSync(dir)) {
+      this.deps.error(`Error: Directory '${dir}' does not exist.`);
+      this.deps.exit(1);
+    }
+    return dir || this.deps.cwd();
+  }
+
+  /**
    * Handle the check command
    */
   async handleCheckCommand(dir: string | undefined, options: CheckCommandOptions): Promise<void> {
@@ -373,7 +386,7 @@ export class CLIHandlers {
    * Handle the badge command
    */
   async handleBadgeCommand(dir: string | undefined, options: BadgeCommandOptions): Promise<void> {
-    const workingDir = dir || this.deps.cwd();
+    const workingDir = this.validateDir(dir);
     const configLoader = this.deps.createConfigLoader
       ? this.deps.createConfigLoader(dir ? dir + '/.pulsetel.yml' : undefined)
       : (dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader());
@@ -423,7 +436,7 @@ export class CLIHandlers {
    * Handle the sentry command
    */
   async handleSentryCommand(dir: string | undefined, options: SentryCommandOptions): Promise<void> {
-    const workingDir = dir || this.deps.cwd();
+    const workingDir = this.validateDir(dir);
     const configLoader = this.deps.createConfigLoader
       ? this.deps.createConfigLoader(dir ? dir + '/.pulsetel.yml' : undefined)
       : (dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader());
@@ -569,7 +582,7 @@ export class CLIHandlers {
    * Handle the health command
    */
   async handleHealthCommand(dir: string | undefined, options: HealthCommandOptions): Promise<void> {
-    const workingDir = dir || this.deps.cwd();
+    const workingDir = this.validateDir(dir);
     const configLoader = this.deps.createConfigLoader
       ? this.deps.createConfigLoader(dir ? dir + '/.pulsetel.yml' : undefined)
       : (dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader());
@@ -625,7 +638,7 @@ export class CLIHandlers {
    * Handle the status command
    */
   async handleStatusCommand(dir: string | undefined, options: StatusCommandOptions): Promise<void> {
-    const workingDir = dir || this.deps.cwd();
+    const workingDir = this.validateDir(dir);
     const historyDir = workingDir + '/.pulsetel-history';
 
     const history = loadHistory(historyDir);
@@ -679,7 +692,7 @@ export class CLIHandlers {
    * Handle the report command
    */
   async handleReportCommand(dir: string | undefined, options: ReportCommandOptions): Promise<void> {
-    const workingDir = dir || this.deps.cwd();
+    const workingDir = this.validateDir(dir);
     const configLoader = this.deps.createConfigLoader
       ? this.deps.createConfigLoader(dir ? dir + '/.pulsetel.yml' : undefined)
       : (dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader());
@@ -778,7 +791,7 @@ export class CLIHandlers {
    */
   async handleDiffCommand(dir: string | undefined, options: CheckCommandOptions): Promise<void> {
     const { PulsetelDiff } = await import('./diff/index.js');
-    const workingDir = dir || this.deps.cwd();
+    const workingDir = this.validateDir(dir);
     const configLoader = dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader();
     const config = configLoader.autoDetect(workingDir);
     const diff = new PulsetelDiff(config, workingDir);
@@ -814,7 +827,7 @@ export class CLIHandlers {
     this.deps.log('    Press Ctrl+C to exit\n');
 
     // Initial run
-    const workingDir = dir || this.deps.cwd();
+    const workingDir = this.validateDir(dir);
     const configLoader = dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader();
     const config = configLoader.autoDetect(workingDir);
     const scanner = new Scanner(config, workingDir);

@@ -80,6 +80,10 @@ export class ConfigLoader {
   private deps: ConfigLoaderDeps;
 
   constructor(configPath: string = '.pulsetel.yml', deps: ConfigLoaderDeps = defaultConfigLoaderDeps) {
+    // Auto-detect JSON config if YAML doesn't exist but JSON does
+    if (configPath === '.pulsetel.yml' && !deps.existsSync('.pulsetel.yml') && deps.existsSync('.pulsetel.json')) {
+      configPath = '.pulsetel.json';
+    }
     this.configPath = configPath;
     this.deps = deps;
     this.config = this.loadConfig();
@@ -95,10 +99,13 @@ export class ConfigLoader {
 
   private loadConfig(): PulseliveConfig {
     try {
-      // Enforce file size limit to prevent DoS via large YAML
+      // Enforce file size limit to prevent DoS via large config
+      if (!this.deps.existsSync(this.configPath)) {
+        return {};
+      }
       const stats = this.deps.statSync(this.configPath);
       if (stats.size > MAX_CONFIG_SIZE) {
-        console.warn(`Config file exceeds ${MAX_CONFIG_SIZE / 1024}KB limit — ignoring`);
+        console.error(`[pulsetel] Error: Config file ${this.configPath} exceeds ${MAX_CONFIG_SIZE / 1024}KB limit — ignoring`);
         return {};
       }
 
@@ -106,8 +113,27 @@ export class ConfigLoader {
       if (typeof configContent !== 'string') {
         return {};
       }
-      // Use 'core' schema to prevent dangerous YAML constructs (e.g. custom types)
-      const parsed = yaml.parse(configContent, { schema: 'core' });
+
+      let parsed: any;
+
+      if (this.configPath.endsWith('.json')) {
+        // Parse JSON config with clear error messages
+        try {
+          parsed = JSON.parse(configContent);
+        } catch (parseError: any) {
+          const pos = parseError.message;
+          console.error(`[pulsetel] Error: Invalid JSON in ${this.configPath}: ${pos}`);
+          process.exit(1);
+        }
+      } else {
+        // Use 'core' schema to prevent dangerous YAML constructs (e.g. custom types)
+        try {
+          parsed = yaml.parse(configContent, { schema: 'core' });
+        } catch (yamlError: any) {
+          console.error(`[pulsetel] Error: Invalid YAML in ${this.configPath}: ${yamlError.message}`);
+          process.exit(1);
+        }
+      }
 
       if (!parsed || typeof parsed !== 'object') {
         return {};

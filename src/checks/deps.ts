@@ -155,7 +155,7 @@ export class DepsCheck {
       return {
         type: 'deps',
         status: 'error',
-        message: 'Dependencies check failed'
+        message: `Dependencies check failed: ${error instanceof Error ? error.message : String(error)}`
       };
     }
   }

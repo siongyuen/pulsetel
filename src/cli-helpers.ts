@@ -639,6 +639,11 @@ export async function runSingleRepoCheck(
   deps: CLIDeps = defaultCLIDeps
 ): Promise<{ results: CheckResult[]; duration: number; config: PulseliveConfig; workingDir: string }> {
   const startTime = Date.now();
+  // Validate explicit directory argument exists before falling back
+  if (dir && !deps.existsSync(dir)) {
+    deps.error(`Error: Directory '${dir}' does not exist.`);
+    deps.exit(1);
+  }
   const workingDir = dir || deps.cwd();
   const configLoader = dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader();
   
@@ -764,6 +769,10 @@ export async function runFixCommand(
   options: { deps?: boolean; dryRun?: boolean; all?: boolean; json?: boolean; yes?: boolean },
   deps: CLIDeps = defaultCLIDeps
 ): Promise<{ results: FixResult[]; duration: number }> {
+  if (dir && !deps.existsSync(dir)) {
+    deps.error(`Error: Directory '${dir}' does not exist.`);
+    deps.exit(1);
+  }
   const workingDir = dir || deps.cwd();
   const configLoader = dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader();
   const config = configLoader.autoDetect(workingDir);
@@ -849,6 +858,11 @@ export async function runQuickCheck(
   if (options.repos) {
     // This will be handled by the caller
     deps.exit(0);
+  }
+  
+  if (dir && !deps.existsSync(dir)) {
+    deps.error(`Error: Directory '${dir}' does not exist.`);
+    deps.exit(1);
   }
   
   const startTime = Date.now();
