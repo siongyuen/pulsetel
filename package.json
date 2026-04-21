@@ -1,7 +1,7 @@
 {
   "name": "pulsetel-cli",
-  "version": "2.3.3",
-  "description": "The opinionated project health framework for AI agents — telemetry, analytics, and agent guidance in one command.",
+  "version": "2.3.4-beta.0",
+  "description": "MCP server that gives AI agents structured ground truth about the project they're working on.",
   "main": "dist/index.js",
   "bin": {
     "pulsetel": "dist/index.js"
@@ -24,19 +24,13 @@
   "keywords": [
     "mcp",
     "mcp-server",
-    "agent-tools",
-    "ci",
-    "health",
-    "monitoring",
-    "developer-tools",
-    "devops",
-    "telemetry-cli",
     "ai-agent",
-    "telemetry",
+    "agent-tools",
     "project-health",
-    "anomaly-detection",
-    "trend-analysis",
-    "dependency-injection",
+    "ci",
+    "devops",
+    "developer-tools",
+    "health-check",
     "test-coverage"
   ],
   "author": "Sean Cheah",

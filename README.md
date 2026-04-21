@@ -1,40 +1,25 @@
 # PulseTel
 
-**The opinionated project health framework for AI agents.**
+**MCP server that gives AI agents structured ground truth about the project they're working on.**
 
-[![npm version](https://img.shields.io/npm/v/pulsetel-cli.svg)](https://www.npmjs.com/package/pulsetel-cli) [![Test Coverage](https://img.shields.io/badge/coverage-81%25%20statements-brightgreen)](https://github.com/siongyuen/pulsetel) [![Tests](https://img.shields.io/badge/tests-680%20passing-brightgreen)](https://github.com/siongyuen/pulsetel) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![npm version](https://img.shields.io/npm/v/pulsetel-cli.svg)](https://www.npmjs.com/package/pulsetel-cli) [![Test Coverage](https://img.shields.io/badge/coverage-80%25%20statements-brightgreen)](https://github.com/siongyuen/pulsetel) [![Tests](https://img.shields.io/badge/tests-741%20passing-brightgreen)](https://github.com/siongyuen/pulsetel) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-## The Problem
+## Why This Exists
 
-AI agents working on codebases face a common challenge: **project health data is fragmented, unstructured, and ephemeral.**
+AI agents working on codebases fly blind on project health. They don't know if CI is red, if coverage dropped, or if dependencies have critical vulnerabilities — until something breaks.
 
-- CI status is in GitHub Actions
-- Security vulnerabilities are in `npm audit`
-- Test coverage is in a coverage report
-- Git status requires `git status`, `git log`, `git diff`
-- Endpoint health requires manual HTTP checks
+PulseTel closes that loop. An agent queries PulseTel, gets structured ground truth about the project, and **acts on it**. Not dashboards. Not graphs. Just the signals an agent needs, in the format it can use.
 
-An agent *could* collect all this manually. But it requires:
-- Knowing which signals matter
-- Normalizing data across different formats
-- Persisting history for trend analysis
-- Correlating failures across signals
+**Other agents guess. PulseTel agents know.**
 
-**Most agents don't do this.** They fly blind on project health until something breaks.
+## The Agent Feedback Loop
 
-## The Solution
+```
+Agent starts task → checks PulseTel → sees CI is red + coverage dropped 3%
+                                    → adjusts plan, fixes CI first, then continues
+```
 
-PulseTel provides **structured, persistent, analyzable project health telemetry** — the framework agents need to track and understand project health over time.
-
-### What PulseTel Provides
-
-| Layer | What It Does | Why Agents Need It |
-|-------|--------------|-------------------|
-| **Telemetry Collection** | Curated check suite (CI, deps, coverage, git, health) | Agents don't know what signals matter |
-| **Schema Normalization** | Every check returns `{status, message, details, severity}` | Compare apples to apples across different sources |
-| **History Persistence** | Automatic `.pulsetel-history/` with structured entries | Track trends, detect degradation |
-| **Statistical Analytics** | Z-score anomaly detection, trend analysis, confidence scoring | Intelligence agents can't calculate manually |
-| **Multi-Signal Correlation** | Detect when CI failures correlate with coverage drops | Root cause analysis |
+This is the novel loop: **agent queries project health mid-task and gets steered by the result.** No human in the loop, no dashboards to read. Just structured truth, delivered when the agent needs it.
 
 ## Installation
 
@@ -56,76 +41,86 @@ pulsetel init
 
 Auto-detects GitHub repo, health endpoints, and creates `.pulsetel.yml`.
 
-### 2. Collect Telemetry
+### 2. Check
 
 ```bash
-pulsetel check
+pulsetel check          # Full project health check
+pulsetel check --quick  # Fast triage (~2s, skips slow checks)
+pulsetel check --json   # Machine-readable output for agents
 ```
 
-Every run saves structured data to `.pulsetel-history/` for trend analysis.
+Every run persists structured data to `.pulsetel-history/` for trend analysis.
 
 ### 3. Analyze
 
 ```bash
-pulsetel trends          # Trend analysis with direction, delta, velocity
-pulsetel anomalies       # Statistical anomaly detection (2σ threshold)
-pulsetel diff --delta    # Significant changes only, token-efficient
+pulsetel trends          # Direction, delta, velocity per check type
+pulsetel anomalies       # Statistical anomaly detection (z-score)
+pulsetel diff --delta    # Significant changes only (token-efficient)
+pulsetel ping            # Lightweight health ping (0-100 score)
 ```
 
-### 4. Intelligence
-
-```bash
-pulsetel recommend       # Prioritized action list — what to fix first
-```
-
-## For AI Agents (MCP)
+### 4. For AI Agents (MCP)
 
 PulseTel exposes 12 MCP tools that return structured, agent-native responses:
 
 | Tool | Purpose |
 |------|---------|
-| `pulsetel_check` | Full health check with all signals |
-| `pulsetel_quick` | Fast triage (~2s), skips slow checks |
-| `pulsetel_trends` | Trend analysis for specific check types |
-| `pulsetel_anomalies` | Detect statistical anomalies across history |
-| `pulsetel_recommend` | Prioritized fix list with severity/confidence |
-| `pulsetel_telemetry` | OpenTelemetry export for observability |
+| `pulsetel_check` | Full health check — all signals |
+| `pulsetel_quick` | Fast triage (~2s) |
+| `pulsetel_trends` | Trend direction, delta, velocity |
+| `pulsetel_anomalies` | Statistical anomaly detection |
+| `pulsetel_recommend` | Prioritized fix list with severity + confidence |
+| `pulsetel_telemetry` | OpenTelemetry export |
 
 Every response includes `actionable`, `severity`, `confidence`, and `context` — no interpretation required.
 
-## Key Features
+## What PulseTel Actually Does
 
-### Statistical Analytics
-- **Z-score anomaly detection**: 2σ threshold, not naive thresholds
-- **Trend analysis**: Direction, delta, velocity calculations
-- **Confidence scoring**: Multi-factor health aggregation (0-100)
+| Signal | What It Checks | Why It Matters |
+|--------|---------------|----------------|
+| **CI** | GitHub Actions status, flakiness | Don't commit on red |
+| **Dependencies** | Vulnerabilities, outdated packages | Critical vulns block deploys |
+| **Coverage** | Test coverage vs threshold | Catch regressions before merge |
+| **Git** | Branch status, uncommitted changes, divergence | Know the state before acting |
+| **Health** | Endpoint availability, latency | Production health at a glance |
+| **Issues** | Open issue counts and trends | Stale issues signal neglect |
+| **PRs** | Open pull requests | Merge conflicts and review debt |
+| **Deploy** | Recent deployment status | Know what's live |
 
-### Delta Mode (Token Efficient)
+Every check returns a single schema: `{status, message, details, severity, confidence, actionable}`. Apples to apples, every time.
+
+## The Opinion
+
+PulseTel refuses to be a monitoring dashboard. It's a CLI that gives you:
+
+1. **A single health score** (0-100) — not a wall of graphs
+2. **Actionable next steps** — not "it depends"
+3. **Structured data agents can use** — not prose for humans to interpret
+
+If you want dashboards, use Grafana. If you want an agent to know whether it's safe to ship, use PulseTel.
+
+## Delta Mode
+
 ```bash
 pulsetel diff --delta --threshold 5
 ```
-Returns only significant changes with risk assessment — ~90% smaller than full check output.
 
-### Security Hardened
-- SSRF protection (IPv4 + IPv6)
-- No shell injection
-- No token leaks to logs
+Returns only significant changes with risk assessment. ~90% smaller than full check output — designed for token-efficient agent consumption.
 
 ## Schema
 
-PulseTel uses a versioned schema contract ([SCHEMA.md](./SCHEMA.md)):
+Versioned data contract. See [SCHEMA.md](./SCHEMA.md):
 
 ```json
 {
   "schema_version": "1.0.0",
-  "timestamp": "2026-04-20T14:00:00Z",
   "checks": {
-    "ci": { "status": "success", "message": "...", "severity": "low" },
-    "deps": { "status": "warning", "message": "...", "vulnerabilities": {...} },
+    "ci": { "status": "success", "severity": "low", "actionable": "No action needed" },
+    "deps": { "status": "error", "severity": "critical", "actionable": "Fix 2 critical vulnerabilities before next deploy" },
     "coverage": { "status": "error", "percentage": 59.5, "threshold": 80 }
   },
-  "confidence": 65,
-  "recommendation": "Fix 2 critical vulnerabilities before next deploy"
+  "confidence": 65
 }
 ```
 
@@ -134,6 +129,7 @@ PulseTel uses a versioned schema contract ([SCHEMA.md](./SCHEMA.md)):
 - [SCHEMA.md](./SCHEMA.md) — Versioned data contract
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — System design
 - [CHANGELOG.md](./CHANGELOG.md) — Release history
+- [SECURITY.md](./SECURITY.md) — Security model and SSRF protection
 
 ## License
 
