@@ -15,3 +15,5 @@ start-mcp.js
 start-server-direct.js
 test-mcp.js.pulsetel-history/
 dist/
+
+.pulsetel-history/
