@@ -69,7 +69,7 @@ export class DepsCheck {
           const auditOutput = this.deps.execFile('npm', ['audit', '--json'], {
             encoding: 'utf8',
             stdio: ['pipe', 'pipe', 'pipe'],
-            timeout: 30000 // Prevent hanging on slow networks
+            timeout: 30000
           });
           auditData = JSON.parse(auditOutput);
         } catch (error: any) {
@@ -113,7 +113,7 @@ export class DepsCheck {
           const outdatedOutput = this.deps.execFile('npm', ['outdated', '--json'], {
             encoding: 'utf8',
             stdio: ['pipe', 'pipe', 'pipe'],
-            timeout: 30000 // Prevent hanging on slow networks
+            timeout: 30000
           });
           outdatedData = JSON.parse(outdatedOutput);
         } catch (error: any) {
@@ -167,8 +167,7 @@ export class DepsCheck {
     try {
       const output = this.deps.execFile('pip-audit', ['--format', 'json'], {
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: 30000
+        stdio: ['pipe', 'pipe', 'pipe']
       }).trim();
       return {
         type: 'deps',
@@ -201,8 +200,7 @@ export class DepsCheck {
     try {
       this.deps.execFile('govulncheck', ['./...'], {
         encoding: 'utf8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-        timeout: 30000
+        stdio: ['pipe', 'pipe', 'pipe']
       });
       return {
         type: 'deps',
@@ -211,17 +209,20 @@ export class DepsCheck {
       };
     } catch (error: any) {
       // govulncheck exits non-zero when vulnerabilities found
-      if (error.stdout && error.stdout.includes('Vulnerability')) {
-        return {
-          type: 'deps',
-          status: 'warning',
-          message: 'Go vulnerabilities found — review govulncheck output',
-          details: { error: error.stdout }
-        };
+      const output = error.stdout || error.stderr || '';
+      if (output) {
+        const vulnCount = (output.match(/Vulnerability/g) || []).length;
+        if (vulnCount > 0) {
+          return {
+            type: 'deps',
+            status: 'warning',
+            message: `${vulnCount} Go vulnerabilities found`,
+            details: { vulnerabilities: { critical: 0, high: 0, medium: vulnCount, low: 0 }, outdated: 0 }
+          };
+        }
       }
     }
 
-    // No package manager detected
     return {
       type: 'deps',
       status: 'success',

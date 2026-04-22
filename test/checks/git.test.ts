@@ -66,17 +66,20 @@ describe('GitCheck', () => {
       expect(result.details.divergence).toContain('ahead');
     });
 
-    it('should handle non-git repository gracefully', async () => {
-      mockDeps.execFile.mockImplementation(() => {
-        throw new Error('fatal: not a git repository (or any of the parent directories): .git');
-      });
+    it('should skip gracefully when not a git repository', async () => {
+      mockDeps.existsSync.mockReturnValue(false);
 
       gitCheck = new GitCheck(config, '/project', mockDeps);
       const result = await gitCheck.run();
 
       expect(result.type).toBe('git');
-      expect(result.status).toBe('warning');
-      expect(result.message).toContain('⚠ Not a git repository — git-dependent checks (CI, PRs, issues) skipped');
+      expect(result.status).toBe('success');
+      expect(result.severity).toBe('low');
+      expect(result.confidence).toBe('high');
+      expect(result.message).toContain('Not a git repository');
+      expect(result.details?.skipped).toBe(true);
+      // Should not call execFile at all
+      expect(mockDeps.execFile).not.toHaveBeenCalled();
     });
 
     it('should handle repo with no commits yet', async () => {

@@ -59,15 +59,15 @@ export interface PulseliveConfig {
       };
     };
     timeouts?: {
-      deps?: number;    // Timeout for dependency checks (ms)
-      health?: number;  // Timeout for health endpoint checks (ms)
-      git?: number;     // Timeout for git checks (ms)
-      ci?: number;      // Timeout for CI checks (ms)
-      issues?: number;  // Timeout for issue checks (ms)
-      deploy?: number;  // Timeout for deploy checks (ms)
-      prs?: number;     // Timeout for PR checks (ms)
-      sentry?: number;  // Timeout for sentry checks (ms)
-      coverage?: number; // Timeout for coverage checks (ms)
+      deps?: number;
+      health?: number;
+      git?: number;
+      ci?: number;
+      issues?: number;
+      deploy?: number;
+      prs?: number;
+      sentry?: number;
+      coverage?: number;
     };
   };
   webhooks?: WebhookConfig[];

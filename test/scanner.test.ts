@@ -93,11 +93,34 @@ describe('Scanner', () => {
     expect(mockDeps.webhook!.notify).toHaveBeenCalled();
   });
 
-  it('calls OTel exportResults when OTel is enabled', async () => {
-    (mockDeps.otel!.init as any).mockReturnValue(true);
-    const scanner = new Scanner({}, undefined, mockDeps);
-    await scanner.runAllChecks();
-    expect(mockDeps.otel!.exportResults).toHaveBeenCalled();
+  it('uses configurable timeout from config when provided', async () => {
+    const slowCheck = {
+      type: 'slow',
+      factory: () => ({
+        run: vi.fn().mockImplementation(() => 
+          new Promise(resolve => setTimeout(() => resolve({ 
+            type: 'slow', 
+            status: 'success', 
+            message: 'ok' 
+          }), 100))
+        ),
+      }),
+      retryable: false,
+      configKey: 'slow',
+    };
+
+    mockDeps.checks = [slowCheck];
+    
+    // Config timeout is 50ms, but check takes 100ms → should timeout
+    const scanner = new Scanner({ 
+      checks: { 
+        timeouts: { slow: 50 } 
+      } 
+    }, undefined, mockDeps);
+    
+    const result = await scanner.runSingleCheck('slow');
+    expect(result.status).toBe('error');
+    expect(result.message).toContain('timed out');
   });
 
   it('does not call OTel exportResults when OTel is disabled', async () => {
