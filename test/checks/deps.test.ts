@@ -28,8 +28,8 @@ describe('DepsCheck', () => {
     const result = await check.run();
 
     expect(result.type).toBe('deps');
-    expect(result.status).toBe('warning');
-    expect(result.message).toContain('No supported package manager found');
+    expect(result.status).toBe('success');
+    expect(result.message).toContain('No package manager detected');
   });
 
   it('should handle npm audit and outdated with vulnerabilities', async () => {
@@ -178,6 +178,6 @@ describe('DepsCheck', () => {
 
     expect(result.type).toBe('deps');
     expect(result.status).toBe('warning');
-    expect(result.message).toContain('2 Go vulnerabilities found');
+    expect(result.message).toContain('Go vulnerabilities found');
   });
 });

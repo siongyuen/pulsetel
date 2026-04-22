@@ -23,8 +23,8 @@ describe('PulseTel Integration Test - Real Project', () => {
             description: 'Test project for PulseTel integration testing',
             main: 'index.js',
             scripts: {
-              test: "echo 'Tests failing!' && exit 1",
-              build: "echo 'Build failing!' && exit 1",
+              test: "echo 'Tests failing!' \u0026\u0026 exit 1",
+              build: "echo 'Build failing!' \u0026\u0026 exit 1",
             },
             dependencies: {
               lodash: '4.17.15',

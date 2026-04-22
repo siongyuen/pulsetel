@@ -1,6 +1,8 @@
 import { PulseliveConfig } from '../config';
 import { CheckResult } from '../scanner';
 import { execFileSync } from 'child_process';
+import { existsSync } from 'fs';
+import path from 'path';
 
 /**
  * Dependency injection interface for GitCheck.
@@ -9,6 +11,7 @@ import { execFileSync } from 'child_process';
  */
 export interface GitDeps {
   execFile: (command: string, args: string[], options: { encoding: string; stdio: string[]; cwd: string }) => string;
+  existsSync: (path: string) => boolean;
 }
 
 /**
@@ -18,6 +21,7 @@ export const defaultGitDeps: GitDeps = {
   execFile: (command, args, options) => {
     return execFileSync(command, args, options as any).toString();
   },
+  existsSync: (p) => existsSync(p),
 };
 
 export class GitCheck {
@@ -44,6 +48,20 @@ export class GitCheck {
   }
 
   async run(): Promise<CheckResult> {
+    // Skip if not a git repository
+    if (!this.deps.existsSync(path.join(this.workingDir, '.git'))) {
+      return {
+        type: 'git',
+        status: 'success',
+        severity: 'low',
+        confidence: 'high',
+        message: 'Not a git repository — skipping git checks',
+        actionable: 'Initialize git repository if this is a code project',
+        context: 'Git checks only apply to version-controlled projects',
+        details: { skipped: true }
+      };
+    }
+
     try {
       // Get current branch
       const branch = this.git(['rev-parse', '--abbrev-ref', 'HEAD']);

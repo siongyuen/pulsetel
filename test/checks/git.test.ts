@@ -11,6 +11,7 @@ describe('GitCheck', () => {
     config = {};
     mockDeps = {
       execFile: vi.fn(),
+      existsSync: vi.fn().mockReturnValue(true), // Default to git repo existing
     };
   });
 

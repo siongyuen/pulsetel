@@ -186,6 +186,7 @@ export class Scanner {
 
   /**
    * Run a single check entry, with optional retry, OTel wrapping, and timeout.
+   * Uses per-check timeout from config if available, otherwise defaults to 30s.
    */
   private async runCheck(entry: CheckEntry): Promise<CheckResult> {
     const check = entry.factory(this.config, this.workingDir);
@@ -194,8 +195,9 @@ export class Scanner {
       ? () => this.deps.otel.withSpan(entry.type, runFn)
       : runFn;
     
-    // Apply timeout if specified
-    const timeoutMs = entry.timeoutMs || DEFAULT_CHECK_TIMEOUT_MS;
+    // Apply timeout: config > entry default > global default
+    const configTimeout = this.config.checks?.timeouts?.[entry.configKey as keyof typeof this.config.checks.timeouts];
+    const timeoutMs = configTimeout || entry.timeoutMs || DEFAULT_CHECK_TIMEOUT_MS;
     return runWithTimeout(wrappedFn, timeoutMs, entry.type);
   }
 
