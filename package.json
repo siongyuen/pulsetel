@@ -12,14 +12,15 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run sync-version && tsc",
+    "sync-version": "node scripts/sync-version.js",
     "pretest": "npm run build",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "coverage-detailed": "vitest run --coverage --reporter=verbose",
     "dev": "tsc --watch",
     "start": "node dist/index.js mcp",
-    "prepublishOnly": "tsc"
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
