@@ -4,7 +4,7 @@ import { ConfigLoader } from '../src/config';
 import { CheckResult } from '../src/scanner';
 import { HistoryEntry } from '../src/trends';
 
-describe('pulsetel_verify', () => {
+describe('pulsetel_gate', () => {
   const createMockScanner = (results: CheckResult[]) => ({
     runAllChecks: vi.fn().mockResolvedValue(results),
     runQuickChecks: vi.fn(),
@@ -23,15 +23,12 @@ describe('pulsetel_verify', () => {
     results
   }];
 
-  it('should verify and show improvement from previous run', async () => {
-    const previousResults: CheckResult[] = [
-      { type: 'health', status: 'error', message: 'endpoint failed' },
-      { type: 'deps', status: 'success', message: 'ok' }
-    ];
-
+  it('should return proceed when no issues detected', async () => {
     const currentResults: CheckResult[] = [
       { type: 'health', status: 'success', message: 'endpoint ok' },
-      { type: 'deps', status: 'success', message: 'ok' }
+      { type: 'deps', status: 'success', message: 'deps ok' },
+      { type: 'ci', status: 'success', message: 'ci passing' },
+      { type: 'coverage', status: 'success', message: 'coverage good' }
     ];
 
     const server = new MCPServer(
@@ -40,30 +37,20 @@ describe('pulsetel_verify', () => {
       createMockDeps(currentResults)
     );
 
-    const result = await server.handleToolRequest('pulsetel_verify', process.cwd(), {
-      includeTrends: false,
-      history: createHistory(previousResults)
-    });
+    const result = await server.handleToolRequest('pulsetel_gate', process.cwd());
 
-    expect(result.current).toBeDefined();
-    expect(result.delta).toBeDefined();
-    expect(result.delta.improved).toHaveLength(1);
-    expect(result.delta.improved[0].type).toBe('health');
-    expect(result.delta.improved[0].from).toBe('error');
-    expect(result.delta.improved[0].to).toBe('success');
-    expect(result.delta.worsened).toHaveLength(0);
-    expect(result.recommendations).toContain('improved');
+    expect(result.decision).toBe('proceed');
+    expect(result.blockingIssues).toHaveLength(0);
+    expect(result.proceedConditions).toHaveLength(0);
+    expect(result.patterns).toBeDefined();
   });
 
-  it('should verify and show worsening from previous run', async () => {
-    const previousResults: CheckResult[] = [
-      { type: 'health', status: 'success', message: 'endpoint ok' },
-      { type: 'deps', status: 'success', message: 'ok' }
-    ];
-
+  it('should return block when dependency cascade detected', async () => {
     const currentResults: CheckResult[] = [
       { type: 'health', status: 'success', message: 'endpoint ok' },
-      { type: 'deps', status: 'warning', message: '2 vulnerabilities' }
+      { type: 'deps', status: 'error', message: 'vulnerabilities found' },
+      { type: 'ci', status: 'error', message: 'ci failing' },
+      { type: 'coverage', status: 'warning', message: 'coverage dropped' }
     ];
 
     const server = new MCPServer(
@@ -72,35 +59,11 @@ describe('pulsetel_verify', () => {
       createMockDeps(currentResults)
     );
 
-    const result = await server.handleToolRequest('pulsetel_verify', process.cwd(), {
-      includeTrends: false,
-      history: createHistory(previousResults)
-    });
+    const result = await server.handleToolRequest('pulsetel_gate', process.cwd());
 
-    expect(result.delta.worsened).toHaveLength(1);
-    expect(result.delta.worsened[0].type).toBe('deps');
-    expect(result.delta.worsened[0].from).toBe('success');
-    expect(result.delta.worsened[0].to).toBe('warning');
-    expect(result.recommendations).toContain('worsened');
-  });
-
-  it('should handle no previous history', async () => {
-    const currentResults: CheckResult[] = [
-      { type: 'health', status: 'success', message: 'endpoint ok' }
-    ];
-
-    const server = new MCPServer(
-      new ConfigLoader(),
-      3000,
-      createMockDeps(currentResults)
-    );
-
-    const result = await server.handleToolRequest('pulsetel_verify', process.cwd());
-
-    expect(result.previous_check).toBeNull();
-    expect(result.delta.unchanged).toHaveLength(1);
-    expect(result.delta.unchanged[0].message).toContain('New check');
-    expect(result.recommendations).toBe('✓ No change');
+    expect(result.decision).toBe('block');
+    expect(result.blockingIssues.length).toBeGreaterThan(0);
+    expect(result.confidence).toBeGreaterThan(0);
   });
 
   it('should include schema version and timestamp', async () => {
@@ -114,10 +77,10 @@ describe('pulsetel_verify', () => {
       createMockDeps(currentResults)
     );
 
-    const result = await server.handleToolRequest('pulsetel_verify', process.cwd());
+    const result = await server.handleToolRequest('pulsetel_gate', process.cwd());
 
     expect(result.schema_version).toBe('1.0.0');
     expect(result.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(result.duration).toBeGreaterThanOrEqual(0);
+    expect(result.version).toBeDefined();
   });
 });

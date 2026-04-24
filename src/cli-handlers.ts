@@ -90,6 +90,14 @@ export interface ReportCommandOptions {
   format?: string;
 }
 
+export interface CorrelateCommandOptions {
+  json?: boolean;
+}
+
+export interface GateCommandOptions {
+  json?: boolean;
+}
+
 export interface WatchCommandOptions {
   quick?: boolean;
   json?: boolean;
@@ -917,6 +925,61 @@ export class CLIHandlers {
   }
 
   /**
+   * Handle the correlate command
+   */
+  async handleCorrelateCommand(dir: string | undefined, options: CorrelateCommandOptions): Promise<void> {
+    const workingDir = this.validateDir(dir);
+    const configLoader = this.deps.createConfigLoader
+      ? this.deps.createConfigLoader(dir ? dir + '/.pulsetel.yml' : undefined)
+      : (dir ? new ConfigLoader(dir + '/.pulsetel.yml') : new ConfigLoader());
+    const config = configLoader.autoDetect(workingDir);
+    const scanner = this.deps.createScanner
+      ? this.deps.createScanner(config, workingDir)
+      : new Scanner(config, workingDir);
+    
+    const { CorrelationEngine } = await import('./correlate.js');
+    const correlationEngine = new CorrelationEngine();
+    
+    // Run checks to get current state
+    const results: CheckResult[] = await scanner.runAllChecks();
+    const history = loadHistory(workingDir + '/.pulsetel-history');
+    
+    // Detect patterns
+    const patterns = correlationEngine.detectPatterns(results, history);
+    
+    if (options.json) {
+      this.deps.log(JSON.stringify({
+        schema_version: "1.0.0",
+        schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
+        version: VERSION,
+        timestamp: new Date().toISOString(),
+        patterns,
+        patternCount: patterns.length,
+        hasBlockingIssues: patterns.some(p => ['dependency_cascade', 'security_scan_gap', 'deploy_regression'].includes(p.pattern))
+      }, null, 2));
+    } else {
+      if (patterns.length === 0) {
+        this.deps.log('✅ No correlation patterns detected');
+      } else {
+        this.deps.log('🔗 DETECTED CORRELATION PATTERNS');
+        this.deps.log('===============================\n');
+        
+        patterns.forEach((pattern, index) => {
+          const severityIcon = pattern.blastRadius === 'high' ? '🔴' : 
+                               pattern.blastRadius === 'medium' ? '🟡' : '🟢';
+          this.deps.log(`${index + 1}. ${severityIcon} ${pattern.pattern.replace('_', ' ').toUpperCase()}`);
+          this.deps.log(`   Pattern: ${pattern.causalChain.join(' → ')}`);
+          this.deps.log(`   Actionable: ${pattern.actionable}`);
+          this.deps.log(`   Blast Radius: ${pattern.blastRadius}`);
+          this.deps.log(`   Confidence: ${(pattern.confidence * 100).toFixed(0)}%`);
+          this.deps.log(`   Fix Time: ${pattern.fixTimeEstimate}`);
+          this.deps.log('');
+        });
+      }
+    }
+  }
+
+  /**
    * Handle the watch command
    */
   async handleWatchCommand(dir: string | undefined, options: WatchCommandOptions): Promise<void> {
@@ -991,6 +1054,79 @@ export class CLIHandlers {
       watcher.close();
       process.exit(0);
     });
+  }
+
+  /**
+   * Handle the gate command — ship gate decision based on correlation patterns
+   */
+  async handleGateCommand(dir: string | undefined, options: GateCommandOptions): Promise<void> {
+    const workingDir = this.validateDir(dir);
+    const configLoader = new ConfigLoader(dir ? dir + '/.pulsetel.yml' : undefined);
+    const config = configLoader.autoDetect(workingDir);
+    const scanner = new Scanner(config, workingDir);
+
+    const { CorrelationEngine } = await import('./correlate.js');
+    const correlationEngine = new CorrelationEngine();
+
+    const results: CheckResult[] = await scanner.runAllChecks();
+    const history = loadHistory(workingDir + '/.pulsetel-history');
+
+    const patterns = correlationEngine.detectPatterns(results, history);
+    const decision = correlationEngine.makeShipDecision(patterns);
+
+    if (options.json) {
+      this.deps.log(JSON.stringify({
+        schema_version: '1.0.0',
+        schema_url: 'https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md',
+        version: VERSION,
+        timestamp: new Date().toISOString(),
+        decision: decision.decision,
+        blockingIssues: decision.blockingIssues,
+        proceedConditions: decision.proceedConditions,
+        confidence: decision.confidence,
+        patterns: patterns.map(p => ({
+          pattern: p.pattern,
+          confidence: p.confidence,
+          actionable: p.actionable
+        }))
+      }, null, 2));
+    } else {
+      const icon = decision.decision === 'proceed' ? '✅' :
+                   decision.decision === 'caution' ? '⚠️' : '🚫';
+      this.deps.log(`\n${icon} SHIP GATE: ${decision.decision.toUpperCase()}`);
+      this.deps.log('===============================\n');
+
+      if (decision.blockingIssues.length > 0) {
+        this.deps.log('🔴 BLOCKING ISSUES:');
+        decision.blockingIssues.forEach((issue: string) => {
+          this.deps.log(`   • ${issue}`);
+        });
+        this.deps.log('');
+      }
+
+      if (decision.proceedConditions.length > 0) {
+        this.deps.log('⚠️ PROCEED CONDITIONS:');
+        decision.proceedConditions.forEach((condition: string) => {
+          this.deps.log(`   • ${condition}`);
+        });
+        this.deps.log('');
+      }
+
+      if (decision.blockingIssues.length === 0 && decision.proceedConditions.length === 0) {
+        this.deps.log('   No issues detected — all clear to ship.\n');
+      }
+
+      this.deps.log(`Confidence: ${(decision.confidence * 100).toFixed(0)}%`);
+    }
+
+    // Exit codes: 0=proceed, 1=block, 2=caution
+    if (decision.decision === 'block') {
+      this.deps.exit(1);
+    } else if (decision.decision === 'caution') {
+      this.deps.exit(2);
+    } else {
+      this.deps.exit(0);
+    }
   }
 }
 

@@ -6,7 +6,7 @@
 import { CheckResult } from './scanner';
 import { HistoryEntry } from './trends';
 import { VERSION } from './version';
-import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import { PulseliveConfig } from './config';
@@ -428,8 +428,38 @@ export function saveHistory(results: CheckResult[]): void {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filePath = path.join(historyDir, `run-${timestamp}.json`);
     writeFileSync(filePath, JSON.stringify(historyEntry, null, 2));
+
+    // History rotation: keep only last 100 entries
+    rotateHistory(historyDir);
   } catch {
     // Silent fail - history is best-effort
+  }
+}
+
+// ── History Rotation ───
+
+function rotateHistory(historyDir: string): void {
+  try {
+    if (!existsSync(historyDir)) return;
+
+    const files = readdirSync(historyDir)
+      .filter(file => file.startsWith('run-') && file.endsWith('.json'))
+      .sort((a, b) => {
+        // Sort by timestamp (newest first)
+        const aTime = new Date(a.replace('run-', '').replace('.json', '').replace(/-/g, ':'));
+        const bTime = new Date(b.replace('run-', '').replace('.json', '').replace(/-/g, ':'));
+        return bTime.getTime() - aTime.getTime();
+      });
+
+    // Keep only last 100 files
+    if (files.length > 100) {
+      const filesToDelete = files.slice(100);
+      for (const file of filesToDelete) {
+        unlinkSync(path.join(historyDir, file));
+      }
+    }
+  } catch {
+    // Silent fail - rotation is best-effort
   }
 }
 

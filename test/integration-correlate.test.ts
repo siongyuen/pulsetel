@@ -5,7 +5,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { existsSync, mkdirSync, writeFileSync, rmSync } from 'fs';
 import path from 'path';
 
-describe('PulseTel Integration Test - Real Project', () => {
+describe('PulseTel Integration Test - Correlation Engine', () => {
   const testProjectDir = path.resolve(__dirname, '../tmp/pulsetel-test-project');
 
   beforeAll(() => {
@@ -94,50 +94,64 @@ webhooks: []
     expect(config.health?.endpoints?.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('should run pulsetel_recommend and return actionable recommendations', async () => {
+  it('should run pulsetel_correlate and detect correlation patterns', async () => {
     // Create config loader for test project
     const configLoader = new ConfigLoader(path.join(testProjectDir, '.pulsetel.yml'));
 
-    // Create mock scanner that returns realistic results
+    // Create mock scanner that returns realistic results for pattern detection
     const mockResults: CheckResult[] = [
       {
-        type: 'health',
+        type: 'deps',
         status: 'error',
         severity: 'critical',
         confidence: 'high',
-        message: '2 endpoint(s) failed, avg 0ms',
-        actionable: 'Investigate endpoint failures and performance issues',
-        context: 'Endpoint failures indicate service problems',
-        duration: 2729,
-        details: [
-          { name: 'Test Endpoint', url: 'https://httpbin.org/status/200', status: 400, responseTime: 488 },
-          { name: 'Failing Endpoint', url: 'https://httpbin.org/status/500', status: 400, responseTime: 772 }
-        ]
-      },
-      {
-        type: 'deps',
-        status: 'warning',
-        severity: 'medium',
-        confidence: 'high',
-        message: '2 vulnerabilities, 3 outdated packages',
-        actionable: 'Update outdated packages and review vulnerabilities',
+        message: '5 vulnerabilities found',
+        actionable: 'Run npm audit fix to address vulnerabilities',
         context: 'Outdated or vulnerable dependencies are security and stability risks',
         duration: 913,
         details: {
-          vulnerabilities: { critical: 0, high: 0, medium: 2, low: 0 },
-          outdated: 3
+          vulnerabilities: { critical: 2, high: 1, medium: 2, low: 0 },
+          outdated: 8
         }
       },
       {
-        type: 'git',
+        type: 'ci',
+        status: 'error',
+        severity: 'critical',
+        confidence: 'high',
+        message: 'CI pipeline failing',
+        actionable: 'Check CI workflow logs — resolve build/test failures before merging',
+        context: 'CI status gates merges and deployments',
+        duration: 2729,
+        details: {
+          flakinessScore: 45.2,
+          recentRuns: [
+            { status: 'failure', duration: 120000 },
+            { status: 'failure', duration: 115000 },
+            { status: 'success', duration: 95000 }
+          ]
+        }
+      },
+      {
+        type: 'coverage',
+        status: 'warning',
+        severity: 'medium',
+        confidence: 'high',
+        message: 'Coverage at 68.5% (below 80% threshold)',
+        actionable: 'Coverage below threshold — add tests for uncovered paths',
+        context: 'Low coverage means untested code paths and higher regression risk',
+        duration: 1455,
+        details: { percentage: 68.5, threshold: 80 }
+      },
+      {
+        type: 'health',
         status: 'success',
         severity: 'low',
         confidence: 'high',
-        message: 'Git status: master branch',
-        actionable: 'No action needed - Git status is clean',
-        context: 'Repository is in sync with remote',
-        duration: 1455,
-        details: { branch: 'master', uncommitted: 3 }
+        message: 'All endpoints healthy',
+        actionable: 'No action needed',
+        context: 'Endpoints are healthy',
+        duration: 100
       }
     ];
 
@@ -155,71 +169,57 @@ webhooks: []
 
     const server = new MCPServer(configLoader, 3000, mockDeps);
 
-    // Call pulsetel_recommend
-    const result = await server.handleToolRequest('pulsetel_recommend');
+    // Call pulsetel_correlate
+    const result = await server.handleToolRequest('pulsetel_correlate');
 
-    // Verify recommendations
+    // Verify correlation patterns detected
     expect(result).toBeDefined();
-    expect(result.recommendations).toBeDefined();
-    expect(Array.isArray(result.recommendations)).toBe(true);
-    expect(result.totalRecommendations).toBeGreaterThan(0);
+    expect(result.patterns).toBeDefined();
+    expect(Array.isArray(result.patterns)).toBe(true);
+    expect(result.patternCount).toBeGreaterThanOrEqual(0);
 
-    // Should prioritize issues by severity (critical first, then warning)
-    if (result.recommendations.length > 0) {
-      const first = result.recommendations[0];
-      expect(first.rank).toBe(1);
-      // First should be either critical or warning depending on whether anomalies detected
-      expect(['critical', 'warning']).toContain(first.severity);
-      expect(first.actionable).toBeDefined();
-      expect(first.context).toBeDefined();
+    // Should detect dependency_cascade pattern (deps error + ci error + coverage warning)
+    const hasDependencyCascade = result.patterns.some((p: any) => p.pattern === 'dependency_cascade');
+    expect(hasDependencyCascade).toBe(true);
+
+    if (hasDependencyCascade) {
+      const pattern = result.patterns.find((p: any) => p.pattern === 'dependency_cascade');
+      expect(pattern.causalChain).toEqual(['deps', 'ci', 'coverage']);
+      expect(pattern.actionable).toContain('Dependency changes caused CI failures');
+      expect(pattern.blastRadius).toBe('high');
+      expect(pattern.confidence).toBeGreaterThan(0.7);
     }
-
-    // Verify structure
-    const rec = result.recommendations[0];
-    expect(rec).toHaveProperty('rank');
-    expect(rec).toHaveProperty('checkType');
-    expect(rec).toHaveProperty('severity');
-    expect(rec).toHaveProperty('confidence');
-    expect(rec).toHaveProperty('title');
-    expect(rec).toHaveProperty('actionable');
-    expect(rec).toHaveProperty('context');
   });
 
-  it('should handle all-success scenario', async () => {
+  it('should run pulsetel_gate and make ship decision', async () => {
     const configLoader = new ConfigLoader(path.join(testProjectDir, '.pulsetel.yml'));
 
-    // All checks pass - no issues to recommend
+    // Create mock scanner with critical issues
     const mockResults: CheckResult[] = [
       {
-        type: 'health',
-        status: 'success',
-        severity: 'low',
-        confidence: 'high',
-        message: 'All endpoints healthy',
-        actionable: 'No action needed',
-        context: 'All endpoints responding normally',
-        duration: 100
-      },
-      {
         type: 'deps',
-        status: 'success',
-        severity: 'low',
+        status: 'error',
+        severity: 'critical',
         confidence: 'high',
-        message: 'No vulnerabilities found',
-        actionable: 'No action needed',
-        context: 'Dependencies are up to date',
-        duration: 100
+        message: 'Critical vulnerabilities found',
+        actionable: 'Run npm audit fix to address vulnerabilities',
+        context: 'Outdated or vulnerable dependencies are security and stability risks',
+        duration: 913,
+        details: {
+          vulnerabilities: { critical: 5, high: 3, medium: 2, low: 0 },
+          outdated: 15
+        }
       },
       {
-        type: 'git',
-        status: 'success',
-        severity: 'low',
+        type: 'ci',
+        status: 'error',
+        severity: 'critical',
         confidence: 'high',
-        message: 'Git status clean',
-        actionable: 'No action needed',
-        context: 'Repository is in sync with remote',
-        duration: 100,
-        details: { branch: 'master', uncommitted: 0 }
+        message: 'CI pipeline failing',
+        actionable: 'Check CI workflow logs — resolve build/test failures before merging',
+        context: 'CI status gates merges and deployments',
+        duration: 2729,
+        details: { flakinessScore: 65.8 }
       }
     ];
 
@@ -234,9 +234,12 @@ webhooks: []
     };
 
     const server = new MCPServer(configLoader, 3000, mockDeps);
-    const result = await server.handleToolRequest('pulsetel_recommend');
+    const result = await server.handleToolRequest('pulsetel_gate');
 
-    expect(result.totalRecommendations).toBe(0);
-    expect(result.recommendations).toHaveLength(0);
+    // Should block due to critical issues
+    expect(result.decision).toBe('block');
+    expect(result.blockingIssues).toHaveLength(1);
+    expect(result.blockingIssues[0]).toContain('dependency_cascade');
+    expect(result.confidence).toBeGreaterThan(0.8);
   });
 });

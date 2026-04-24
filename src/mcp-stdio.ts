@@ -188,16 +188,31 @@ const TOOLS = [
     }
   },
   {
-    name: 'pulsetel_recommend',
-    description: 'Get prioritised actionable recommendations ranked by severity and confidence. Returns a ranked list of what to fix first, with specific actions and context.',
+    name: 'pulsetel_correlate',
+    description: 'Run cross-signal correlation engine to detect causal chains across CI/deps/coverage/health/deploy/Sentry checks. Detects 7 patterns: dependency_cascade, security_scan_gap, bad_merge, coverage_quality_divergence, deploy_regression, delivery_bottleneck, untested_performance_regression.',
     inputSchema: {
       type: 'object',
       properties: {
         dir: {
           type: 'string',
-          description: 'Absolute path to the project directory. Defaults to cwd.'
+          description: 'Absolute path to the project directory. Defaults to current working directory.'
         }
-      }
+      },
+      estimated_duration_ms: 8000
+    }
+  },
+  {
+    name: 'pulsetel_gate',
+    description: 'Run ship gate decision based on correlation patterns. Returns proceed/caution/block with blocking issues and proceed conditions. Exit codes: 0=proceed, 1=block, 2=caution.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dir: {
+          type: 'string',
+          description: 'Absolute path to the project directory. Defaults to current working directory.'
+        }
+      },
+      estimated_duration_ms: 8000
     }
   },
   {
@@ -397,18 +412,10 @@ export class MCPStdioServer {
             result = await this.handleGuidance(toolArgs.dir);
           } else if (toolName === 'pulsetel_diff') {
             result = await this.handleDiff(toolArgs.dir, toolArgs.since, toolArgs.threshold);
-          } else if (toolName === 'pulsetel_guard') {
-            if (!toolArgs.command) {
-              return {
-                jsonrpc: '2.0',
-                id: id ?? null,
-                error: {
-                  code: -32602,
-                  message: 'Missing required parameter: command'
-                }
-              };
-            }
-            result = await this.handleGuard(toolArgs.dir, toolArgs.command, toolArgs.threshold);
+          } else if (toolName === 'pulsetel_correlate') {
+            result = await this.handleCorrelate(toolArgs.dir);
+          } else if (toolName === 'pulsetel_gate') {
+            result = await this.handleGate(toolArgs.dir);
           } else {
             result = await this.mcpServer.handleToolRequest(
               toolName,
@@ -492,9 +499,46 @@ export class MCPStdioServer {
     return diff.diffSnapshots(oldSnap, newSnap);
   }
 
-  private async handleGuard(dir?: string, command?: string, threshold?: number): Promise<any> {
-    const config = this.configLoader.autoDetect(dir);
-    const guard = new PulsetelGuard(config, { command: command!, cwd: dir, threshold: threshold || 30 });
-    return guard.run();
+  private async handleCorrelate(dir?: string): Promise<any> {
+    const { CorrelationEngine } = await import('./correlate.js');
+    const correlationEngine = new CorrelationEngine();
+    
+    const scanner = this.mcpServer.getScanner(dir);
+    const history = this.mcpServer.loadHistory();
+    const results = await scanner.runAllChecks();
+    const patterns = correlationEngine.detectPatterns(results, history);
+    
+    return {
+      schema_version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      patterns,
+      patternCount: patterns.length,
+      hasBlockingIssues: patterns.some(p => ['dependency_cascade', 'security_scan_gap', 'deploy_regression'].includes(p.pattern))
+    };
+  }
+
+  private async handleGate(dir?: string): Promise<any> {
+    const { CorrelationEngine } = await import('./correlate.js');
+    const correlationEngine = new CorrelationEngine();
+    
+    const scanner = this.mcpServer.getScanner(dir);
+    const history = this.mcpServer.loadHistory();
+    const results = await scanner.runAllChecks();
+    const patterns = correlationEngine.detectPatterns(results, history);
+    const decision = correlationEngine.makeShipDecision(patterns);
+    
+    return {
+      schema_version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      decision: decision.decision,
+      blockingIssues: decision.blockingIssues,
+      proceedConditions: decision.proceedConditions,
+      confidence: decision.confidence,
+      patterns: patterns.map(p => ({
+        pattern: p.pattern,
+        confidence: p.confidence,
+        actionable: p.actionable
+      }))
+    };
   }
 }

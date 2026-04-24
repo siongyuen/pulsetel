@@ -295,4 +295,22 @@ program
     console.log('- Revoke tokens when no longer needed');
   });
 
+program
+  .command('correlate')
+  .description('Run cross-signal correlation engine to detect causal chains')
+  .argument('[dir]', 'Directory to check (defaults to current directory)')
+  .option('--json', 'Output results as JSON')
+  .action(async (dir, options) => {
+    await cliHandlers.handleCorrelateCommand(dir, options);
+  });
+
+program
+  .command('gate')
+  .description('Run ship gate decision based on correlation patterns')
+  .argument('[dir]', 'Directory to check (defaults to current directory)')
+  .option('--json', 'Output results as JSON')
+  .action(async (dir, options) => {
+    await cliHandlers.handleGateCommand(dir, options);
+  });
+
 program.parse(process.argv);

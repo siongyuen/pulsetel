@@ -263,30 +263,64 @@ describe('MCPServer — Tool Handler Tests', () => {
     });
   });
 
-  describe('pulsetel_recommend', () => {
-    it('returns recommendations ranked by severity', async () => {
+  describe('pulsetel_correlate', () => {
+    it('detects correlation patterns', async () => {
       mockDeps = makeMockDeps([
-        { type: 'ci', status: 'warning', message: 'Flaky CI' },
-        { type: 'deps', status: 'success', message: 'OK' },
-        { type: 'git', status: 'error', message: 'Uncommitted changes' }
+        { type: 'deps', status: 'error', message: 'Vulnerabilities found' },
+        { type: 'ci', status: 'error', message: 'CI failing' },
+        { type: 'coverage', status: 'warning', message: 'Coverage low' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulsetel_recommend');
-      expect(result.recommendations).toBeDefined();
-      expect(Array.isArray(result.recommendations)).toBe(true);
-      expect(result.totalRecommendations).toBeDefined();
+      const result = await server.handleToolRequest('pulsetel_correlate');
+      expect(result.patterns).toBeDefined();
+      expect(Array.isArray(result.patterns)).toBe(true);
+      expect(result.patternCount).toBeDefined();
+      
+      // Should detect dependency_cascade pattern
+      const hasDependencyCascade = result.patterns.some((p: any) => p.pattern === 'dependency_cascade');
+      expect(hasDependencyCascade).toBe(true);
     });
 
-    it('returns empty recommendations when all healthy', async () => {
+    it('returns empty patterns when no correlations found', async () => {
       mockDeps = makeMockDeps([
         { type: 'ci', status: 'success', message: 'OK' },
         { type: 'deps', status: 'success', message: 'OK' }
       ]);
       server = new MCPServer(configLoader, 3000, mockDeps);
 
-      const result = await server.handleToolRequest('pulsetel_recommend');
-      expect(result.recommendations).toBeDefined();
+      const result = await server.handleToolRequest('pulsetel_correlate');
+      expect(result.patterns).toBeDefined();
+      expect(result.patternCount).toBe(0);
+    });
+  });
+
+  describe('pulsetel_gate', () => {
+    it('blocks when critical patterns detected', async () => {
+      mockDeps = makeMockDeps([
+        { type: 'deps', status: 'error', message: 'Critical vulnerabilities' },
+        { type: 'ci', status: 'error', message: 'CI failing' },
+        { type: 'coverage', status: 'warning', message: 'Coverage low' }
+      ]);
+      server = new MCPServer(configLoader, 3000, mockDeps);
+
+      const result = await server.handleToolRequest('pulsetel_gate');
+      expect(result.decision).toBe('block');
+      expect(result.blockingIssues).toHaveLength(1);
+      expect(result.confidence).toBeGreaterThan(0.8);
+    });
+
+    it('proceeds when no critical issues', async () => {
+      mockDeps = makeMockDeps([
+        { type: 'ci', status: 'success', message: 'OK' },
+        { type: 'deps', status: 'success', message: 'OK' }
+      ]);
+      server = new MCPServer(configLoader, 3000, mockDeps);
+
+      const result = await server.handleToolRequest('pulsetel_gate');
+      expect(result.decision).toBe('proceed');
+      expect(result.blockingIssues).toHaveLength(0);
+      expect(result.confidence).toBeGreaterThan(0.9);
     });
   });
 

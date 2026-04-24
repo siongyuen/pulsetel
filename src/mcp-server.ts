@@ -279,10 +279,10 @@ export class MCPServer {
         return this.pulsetelTelemetry(params?.format);
       case 'pulsetel_status':
         return this.pulsetelStatus();
-      case 'pulsetel_recommend':
-        return this.pulsetelRecommend(scanner, history, trendAnalyzer);
-      case 'pulsetel_verify':
-        return this.pulsetelVerify(scanner, params?.history || history, trendAnalyzer);
+      case 'pulsetel_correlate':
+        return this.pulsetelCorrelate(scanner, history, trendAnalyzer);
+      case 'pulsetel_gate':
+        return this.pulsetelGate(scanner, history, trendAnalyzer);
       case 'pulsetel_sentry':
         return this.pulsetelSentry(scanner);
       case 'pulsetel_multi_repo':
@@ -857,82 +857,58 @@ export class MCPServer {
     return enrichResult(result);
   }
 
-  // ── pulsetel_recommend: prioritised actionable recommendations ───
+  // ── pulsetel_correlate: cross-signal correlation ───
 
-  private async pulsetelRecommend(
+  private async pulsetelCorrelate(
     scanner: Scanner,
     history: HistoryEntry[],
     trendAnalyzer: TrendAnalyzer
   ): Promise<any> {
+    const { CorrelationEngine } = await import('./correlate.js');
+    const correlationEngine = new CorrelationEngine();
+    
     const results = await scanner.runAllChecks();
-    const recommendations: Array<{
-      rank: number;
-      checkType: string;
-      severity: 'critical' | 'warning' | 'info';
-      confidence: 'high' | 'medium' | 'low';
-      title: string;
-      actionable: string;
-      context: string;
-    }> = [];
-
-    let rank = 1;
-
-    // Anomalies from history
-    if (history.length > 0) {
-      const anomalies = trendAnalyzer.detectAnomalies(history);
-      for (const a of anomalies) {
-        recommendations.push({
-          rank: rank++,
-          checkType: a.checkType,
-          severity: a.severity === 'high' ? 'critical' : 'warning',
-          confidence: a.zScore > 3 ? 'high' : 'medium',
-          title: `Anomaly in ${a.checkType}: ${a.metric}`,
-          actionable: this.anomalyActionable(a),
-          context: this.anomalyContext(a)
-        });
-      }
-    }
-
-    // Degrading trends
-    if (history.length > 0) {
-      const checkTypes = new Set<string>();
-      history.forEach(e => e.results.forEach(r => checkTypes.add(r.type)));
-      for (const ct of checkTypes) {
-        const trend = trendAnalyzer.analyze(ct, history);
-        if (trend.direction === 'degrading') {
-          recommendations.push({
-            rank: rank++,
-            checkType: ct,
-            severity: 'warning',
-            confidence: 'medium',
-            title: `${ct} trend degrading`,
-            actionable: this.trendActionable(ct, trend),
-            context: this.trendContext(ct, trend)
-          });
-        }
-      }
-    }
-
-    // Warnings
-    for (const r of results) {
-      if (r.status === 'warning') {
-        recommendations.push({
-          rank: rank++,
-          checkType: r.type,
-          severity: 'warning',
-          confidence: 'high',
-          title: `${r.type}: ${r.message}`,
-          actionable: this.warningActionable(r),
-          context: `Warning reported during ${r.type} check`
-        });
-      }
-    }
-
+    const patterns = correlationEngine.detectPatterns(results, history);
+    
     return {
+      schema_version: "1.0.0",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
       version: VERSION,
       timestamp: new Date().toISOString(),
-      totalRecommendations: recommendations.length,
-      recommendations
+      patterns,
+      patternCount: patterns.length,
+      hasBlockingIssues: patterns.some(p => ['dependency_cascade', 'security_scan_gap', 'deploy_regression'].includes(p.pattern))
+    };
+  }
+
+  // ── pulsetel_gate: ship gate decision ───
+
+  private async pulsetelGate(
+    scanner: Scanner,
+    history: HistoryEntry[],
+    trendAnalyzer: TrendAnalyzer
+  ): Promise<any> {
+    const { CorrelationEngine } = await import('./correlate.js');
+    const correlationEngine = new CorrelationEngine();
+    
+    const results = await scanner.runAllChecks();
+    const patterns = correlationEngine.detectPatterns(results, history);
+    const decision = correlationEngine.makeShipDecision(patterns);
+    
+    return {
+      schema_version: "1.0.0",
+      schema_url: "https://github.com/siongyuen/pulsetel/blob/master/SCHEMA.md",
+      version: VERSION,
+      timestamp: new Date().toISOString(),
+      decision: decision.decision,
+      blockingIssues: decision.blockingIssues,
+      proceedConditions: decision.proceedConditions,
+      confidence: decision.confidence,
+      patterns: patterns.map(p => ({
+        pattern: p.pattern,
+        confidence: p.confidence,
+        actionable: p.actionable
+      }))
     };
   }
 

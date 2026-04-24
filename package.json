@@ -1,6 +1,6 @@
 {
   "name": "pulsetel-cli",
-  "version": "2.4.1",
+  "version": "2.5.0",
   "description": "MCP server that gives AI agents structured ground truth about the project they're working on.",
   "main": "dist/index.js",
   "bin": {

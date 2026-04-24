@@ -28,10 +28,10 @@ describe('mcp-helpers', () => {
       expect(VALID_TOOLS).toContain('pulsetel_deps');
       expect(VALID_TOOLS).toContain('pulsetel_summary');
       expect(VALID_TOOLS).toContain('pulsetel_trends');
-      expect(VALID_TOOLS).toContain('pulsetel_verify');
+      expect(VALID_TOOLS).toContain('pulsetel_correlate');
+      expect(VALID_TOOLS).toContain('pulsetel_gate');
       expect(VALID_TOOLS).toContain('pulsetel_anomalies');
       expect(VALID_TOOLS).toContain('pulsetel_metrics');
-      expect(VALID_TOOLS).toContain('pulsetel_recommend');
       expect(VALID_TOOLS).toContain('pulsetel_status');
     });
 
@@ -70,12 +70,12 @@ describe('mcp-helpers', () => {
   // ── getRequiredParamsForTool ──
 
   describe('getRequiredParamsForTool', () => {
-    it('returns dir for check tool', () => {
-      expect(getRequiredParamsForTool('pulsetel_check')).toEqual(['dir']);
+    it('returns dir for check tool (dir is now optional)', () => {
+      expect(getRequiredParamsForTool('pulsetel_check')).toEqual([]);
     });
 
-    it('returns dir for quick tool', () => {
-      expect(getRequiredParamsForTool('pulsetel_quick')).toEqual(['dir']);
+    it('returns dir for quick tool (dir is now optional)', () => {
+      expect(getRequiredParamsForTool('pulsetel_quick')).toEqual([]);
     });
 
     it('returns empty for trends tool', () => {
@@ -90,10 +90,10 @@ describe('mcp-helpers', () => {
       expect(getRequiredParamsForTool('unknown_tool')).toEqual([]);
     });
 
-    it('returns dir for all directory-based tools', () => {
-      const dirTools = ['pulsetel_check', 'pulsetel_quick', 'pulsetel_ci', 'pulsetel_health', 'pulsetel_deps', 'pulsetel_summary', 'pulsetel_recommend', 'pulsetel_verify'];
+    it('returns empty for all directory-based tools (dir is optional)', () => {
+      const dirTools = ['pulsetel_check', 'pulsetel_quick', 'pulsetel_ci', 'pulsetel_health', 'pulsetel_deps', 'pulsetel_summary', 'pulsetel_correlate', 'pulsetel_gate'];
       dirTools.forEach(tool => {
-        expect(getRequiredParamsForTool(tool)).toEqual(['dir']);
+        expect(getRequiredParamsForTool(tool)).toEqual([]);
       });
     });
   });

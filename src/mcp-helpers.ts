@@ -16,10 +16,10 @@ const VALID_TOOLS = [
   'pulsetel_trends',
   'pulsetel_anomalies',
   'pulsetel_metrics',
-  'pulsetel_recommend',
   'pulsetel_status',
   'pulsetel_sentry',
-  'pulsetel_verify'
+  'pulsetel_correlate',
+  'pulsetel_gate'
 ];
 
 export { VALID_TOOLS };
@@ -52,19 +52,19 @@ export function validateDir(dir: string, projectRoot: string = process.cwd()): s
 
 export function getRequiredParamsForTool(tool: string): string[] {
   const toolParams: Record<string, string[]> = {
-    'pulsetel_check': ['dir'],
-    'pulsetel_quick': ['dir'],
-    'pulsetel_ci': ['dir'],
-    'pulsetel_health': ['dir'],
-    'pulsetel_deps': ['dir'],
-    'pulsetel_summary': ['dir'],
-    'pulsetel_recommend': ['dir'],
+    'pulsetel_check': [],
+    'pulsetel_quick': [],
+    'pulsetel_ci': [],
+    'pulsetel_health': [],
+    'pulsetel_deps': [],
+    'pulsetel_summary': [],
     'pulsetel_trends': [],
     'pulsetel_anomalies': [],
     'pulsetel_metrics': [],
     'pulsetel_status': [],
     'pulsetel_sentry': [],
-    'pulsetel_verify': ['dir']
+    'pulsetel_correlate': [],
+    'pulsetel_gate': []
   };
 
   return toolParams[tool] || [];
